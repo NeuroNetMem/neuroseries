@@ -68,6 +68,30 @@ class TsTestCase(unittest.TestCase):
 
         np.testing.assert_array_almost_equal_nulp(np.sort(a), ts.index.values)
 
+    def test_create_ts_wrong_units(self):
+        """
+        if the units are unspported it should raise ValueError
+        """
+        a = np.random.randint(0, 10000000, 100)
+        a.sort()
+        with self.assertRaises(ValueError):
+            ts = nts.Ts(a, time_units='min')
+
+    def test_times_data(self):
+        """
+        tests the times and data properties
+        """
+        a = np.random.randint(0, 10000000, 100)
+        a.sort()
+        b = np.random.randn(100)
+        t = nts.Tsd(a, b)
+        np.testing.assert_array_almost_equal_nulp(b.reshape((len(b), 1)), t.data())
+        np.testing.assert_array_almost_equal_nulp(a, t.times())
+        np.testing.assert_array_almost_equal_nulp(a/1000., t.times(units='ms'))
+        np.testing.assert_array_almost_equal_nulp(a/1.0e6, t.times(units='s'))
+        with self.assertRaises(ValueError):
+            t.times(units='banana')
+
 
 class TsRestrictTestCase(unittest.TestCase):
     def setUp(self):
@@ -133,3 +157,11 @@ class TsRestrictTestCase(unittest.TestCase):
         dt = self.mat_data_right['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
         self.assertTrue((t_closest['data'].values != dt).sum() < 10)
         np.testing.assert_array_almost_equal_nulp(t_closest['data'], dt)
+
+    def test_realign_wrong_units(self):
+        d_a = self.mat_data1['d_a']
+        d_a = d_a.reshape((len(d_a),))
+        t_a = nts.Tsd(self.mat_data1['t_a'].astype(np.int64), d_a, columns=('data',))
+        t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
+        with self.assertRaises(ValueError):
+            t_closest = t_a.realign(t_b, align='banana')

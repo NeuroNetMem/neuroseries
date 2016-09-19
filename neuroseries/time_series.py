@@ -41,8 +41,15 @@ class Tsd(pd.DataFrame):
         t = _format_timestamps(t, time_units)
         super().__init__(index=t, data=d, **kwargs)
 
-    def times(self):
-        return self.index.values
+    def times(self, units='usec'):
+        if units == 'usec':
+            return self.index.values.astype(np.float64)
+        elif units == 'ms':
+            return self.index.values.astype(np.float64) / 1.0e3
+        elif units == 's':
+            return self.index.values.astype(np.float64) / 1.0e6
+        else:
+            raise ValueError('Unrecognized units')
 
     def data(self):
         return self.values
