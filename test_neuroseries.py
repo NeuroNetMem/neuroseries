@@ -120,7 +120,7 @@ class TsRestrictTestCase(unittest.TestCase):
         # tt = tt.reshape((len(tt),))
 
         # np.testing.assert_array_almost_equal_nulp(t_closest.index.values, tt)
-        dt = self.mat_data1['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
+        dt = self.mat_data_left['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
         self.assertTrue((t_closest['data'].values != dt).sum() < 10)
         np.testing.assert_array_almost_equal_nulp(t_closest['data'], dt)
 
@@ -130,6 +130,6 @@ class TsRestrictTestCase(unittest.TestCase):
         t_a = nts.Tsd(self.mat_data_right['t_a'].astype(np.int64), d_a, columns=('data',))
         t_b = nts.Ts(self.mat_data_right['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b)
-        dt = self.mat_data1['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
+        dt = self.mat_data_right['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
         self.assertTrue((t_closest['data'].values != dt).sum() < 10)
         np.testing.assert_array_almost_equal_nulp(t_closest['data'], dt)
