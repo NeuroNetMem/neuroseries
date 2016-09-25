@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import neuroseries as nts
 
-
 class TsTestCase(unittest.TestCase):
     def setUp(self):
         pass
@@ -23,7 +22,7 @@ class TsTestCase(unittest.TestCase):
         ts = nts.Ts(a)
         self.assertIsInstance(ts, pd.DataFrame, msg="ts doesn't return DataFrame")
         self.assertIsInstance(ts.index.values, np.ndarray,
-                      msg="ts doesn't return array values")
+                              msg="ts doesn't return array values")
         self.assertIs(ts.index.dtype, np.dtype(np.int64), msg='index type is not int64')
         np.testing.assert_array_almost_equal_nulp(a, ts.index.values)
 
@@ -43,10 +42,11 @@ class TsTestCase(unittest.TestCase):
         """
         a = np.random.randint(0, 1000, 100)
         a.sort()
-        ts = nts.Ts(a, time_units='ms')
-        np.testing.assert_array_almost_equal_nulp(ts.index.values, a*1000)
-        ts = nts.Ts(a, time_units='s')
-        np.testing.assert_array_almost_equal_nulp(ts.index.values, a.astype(np.int64) * 1000000)
+        a
+        ts = nts.Ts(a/1000, time_units='ms')
+        np.testing.assert_array_almost_equal_nulp(ts.index.values, a)
+        ts = nts.Ts(a/1000000, time_units='s')
+        np.testing.assert_array_almost_equal_nulp(ts.index.values, a.astype(np.int64))
 
     def test_create_ts_time_units_double(self):
         """
@@ -55,7 +55,7 @@ class TsTestCase(unittest.TestCase):
         a = np.floor(np.random.rand(100) * 1000000)
         a.sort()
         ts = nts.Ts(a, time_units='ms')
-        np.testing.assert_array_almost_equal_nulp(ts.index.values, a * 1000)
+        np.testing.assert_array_almost_equal_nulp(ts.index.values/1000, a)
 
     def test_create_ts_from_non_sorted(self):
         """
@@ -85,13 +85,12 @@ class TsTestCase(unittest.TestCase):
         a.sort()
         b = np.random.randn(100)
         t = nts.Tsd(a, b)
-        np.testing.assert_array_almost_equal_nulp(b.reshape((len(b), 1)), t.data())
+        np.testing.assert_array_almost_equal_nulp(b, t.data())
         np.testing.assert_array_almost_equal_nulp(a, t.times())
         np.testing.assert_array_almost_equal_nulp(a/1000., t.times(units='ms'))
         np.testing.assert_array_almost_equal_nulp(a/1.0e6, t.times(units='s'))
         with self.assertRaises(ValueError):
             t.times(units='banana')
-
 
 class TsRestrictTestCase(unittest.TestCase):
     def setUp(self):
@@ -116,21 +115,15 @@ class TsRestrictTestCase(unittest.TestCase):
         t_a = nts.Tsd(self.mat_data1['t_a'].astype(np.int64), d_a, columns=('data',))
         t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b, align='closest')
-        # tt = self.mat_data1['t_closest'].astype(np.int64)
-        # tt = tt.reshape((len(tt),))
         dt = self.mat_data1['d_closest'].reshape((len(self.mat_data1['d_closest'],)))
         self.assertTrue((t_closest['data'].values != dt).sum() < 10)
         np.testing.assert_array_almost_equal_nulp(t_closest['data'], dt)
 
         t_next = t_a.realign(t_b, align='next')
-        # tt = self.mat_data1['t_next'].astype(np.int64)
-        # tt = tt.reshape((len(tt),))
         dt = self.mat_data1['d_next'].reshape((len(self.mat_data1['d_next'],)))
         np.testing.assert_array_almost_equal_nulp(t_next['data'], dt)
 
         t_prev = t_a.realign(t_b, align='prev')
-        # tt = self.mat_data1['t_prev'].astype(np.int64)
-        # tt = tt.reshape((len(tt),))
         dt = self.mat_data1['d_prev'].reshape((len(self.mat_data1['d_prev'],)))
         np.testing.assert_array_almost_equal_nulp(t_prev['data'], dt)
 
@@ -140,10 +133,6 @@ class TsRestrictTestCase(unittest.TestCase):
         t_a = nts.Tsd(self.mat_data_left['t_a'].astype(np.int64), d_a, columns=('data',))
         t_b = nts.Ts(self.mat_data_left['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b)
-        # tt = self.mat_data1['t_closest'].astype(np.int64)
-        # tt = tt.reshape((len(tt),))
-
-        # np.testing.assert_array_almost_equal_nulp(t_closest.index.values, tt)
         dt = self.mat_data_left['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
         self.assertTrue((t_closest['data'].values != dt).sum() < 10)
         np.testing.assert_array_almost_equal_nulp(t_closest['data'], dt)
@@ -165,3 +154,138 @@ class TsRestrictTestCase(unittest.TestCase):
         t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
         with self.assertRaises(ValueError):
             t_closest = t_a.realign(t_b, align='banana')
+
+class IntervalSetOpsTestCase(unittest.TestCase):
+    def setUp(self):
+        from scipy.io import loadmat
+        self.mat_data1 = loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+
+        # note that data are n x 1 here, need to be converted to 1-D in constructor
+        self.a1 = self.mat_data1['a1']
+        self.b1 = self.mat_data1['b1']
+        self.int1 = nts.IntervalSet(self.a1, self.b1, expect_fix=True)
+
+        self.a2 = self.mat_data1['a2']
+        self.b2 = self.mat_data1['b2']
+        self.int2 = nts.IntervalSet(self.a2, self.b2, expect_fix=True)
+
+    def tearDown(self):
+        pass
+
+    def test_create_interval_set(self):
+        """
+        create an interval set from start and end points "to be fixed"
+        """
+        a_i1 = self.mat_data1['a_i1'].ravel()
+        b_i1 = self.mat_data1['b_i1'].ravel()
+        np.testing.assert_array_almost_equal_nulp(a_i1, self.int1['start'])
+        np.testing.assert_array_almost_equal_nulp(b_i1, self.int1['end'])
+
+        a_i2 = self.mat_data1['a_i2'].ravel()
+        b_i2 = self.mat_data1['b_i2'].ravel()
+        np.testing.assert_array_almost_equal_nulp(a_i2, self.int2['start'])
+        np.testing.assert_array_almost_equal_nulp(b_i2, self.int2['end'])
+
+    def test_timespan_tot_length(self):
+        """
+        return the total length and the timespan of the interval set
+        """
+        a_i1 = self.mat_data1['a_i1'].ravel()
+        b_i1 = self.mat_data1['b_i1'].ravel()
+        time_span = self.int1.time_span()
+        self.assertIsInstance(time_span, nts.IntervalSet)
+        self.assertEqual(time_span['start'][0], a_i1[0])
+        self.assertEqual(time_span['end'][0], b_i1[-1])
+        tot_l = (b_i1 - a_i1).sum()
+        self.assertAlmostEqual(self.int1.tot_length(), tot_l)
+
+    def test_intersect(self):
+        """
+        intersection of the interval sets
+        """
+        a_intersect = self.mat_data1['a_intersect'].ravel()
+        b_intersect = self.mat_data1['b_intersect'].ravel()
+        int_intersect = self.int1.intersect(self.int2)
+
+        np.testing.assert_array_almost_equal_nulp(int_intersect['start'], a_intersect)
+        np.testing.assert_array_almost_equal_nulp(int_intersect['end'], b_intersect)
+
+        int_intersect = self.int2.intersect(self.int1)
+
+        np.testing.assert_array_almost_equal_nulp(int_intersect['start'], a_intersect)
+        np.testing.assert_array_almost_equal_nulp(int_intersect['end'], b_intersect)
+
+    def test_union(self):
+        """
+        union of the interval sets
+        """
+        a_union = self.mat_data1['a_union'].ravel()
+        b_union = self.mat_data1['b_union'].ravel()
+        int_union = self.int1.union(self.int2)
+
+        np.testing.assert_array_almost_equal_nulp(int_union['start'], a_union)
+        np.testing.assert_array_almost_equal_nulp(int_union['end'], b_union)
+
+        int_union = self.int2.union(self.int1)
+
+        np.testing.assert_array_almost_equal_nulp(int_union['start'], a_union)
+        np.testing.assert_array_almost_equal_nulp(int_union['end'], b_union)
+
+    def test_setdiff(self):
+        """
+        diffs of the interval sets
+        """
+        a_diff1 = self.mat_data1['a_diff1'].ravel()
+        b_diff1 = self.mat_data1['b_diff1'].ravel()
+        a_diff2 = self.mat_data1['a_diff2'].ravel()
+        b_diff2 = self.mat_data1['b_diff2'].ravel()
+
+        int_diff1 = self.int1.set_diff(self.int2)
+
+        np.testing.assert_array_almost_equal_nulp(int_diff1['start'], a_diff1)
+        np.testing.assert_array_almost_equal_nulp(int_diff1['end'], b_diff1)
+
+        int_diff2 = self.int2.set_diff(self.int1)
+
+        np.testing.assert_array_almost_equal_nulp(int_diff2['start'], a_diff2)
+        np.testing.assert_array_almost_equal_nulp(int_diff2['end'], b_diff2)
+
+
+class TsdIntervalSetRestrictTestCase(unittest.TestCase):
+    def setUp(self):
+        from scipy.io import loadmat
+        self.mat_data1 = loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+
+        self.a1 = self.mat_data1['a1'].ravel()
+        self.b1 = self.mat_data1['b1'].ravel()
+        self.int1 = nts.IntervalSet(self.a1, self.b1, expect_fix=True)
+
+        self.a2 = self.mat_data1['a2'].ravel()
+        self.b2 = self.mat_data1['b2'].ravel()
+        self.int2 = nts.IntervalSet(self.a2, self.b2, expect_fix=True)
+
+        self.tsd_t = self.mat_data1['t'].ravel()
+        self.tsd_d = self.mat_data1['d'].ravel()
+        self.tsd = nts.Tsd(self.tsd_t, self.tsd_d)
+
+    def tearDown(self):
+        pass
+
+    def testRestrict(self):
+        """
+        IntervalSet restrict of tsd
+        """
+        t_r1 = self.mat_data1['t_r1'].ravel()
+        d_r1 = self.mat_data1['d_r1'].ravel()
+        tsd_r1 = self.tsd.restrict(self.int1)
+        np.testing.assert_array_almost_equal_nulp(t_r1, tsd_r1.times())
+        np.testing.assert_array_almost_equal_nulp(d_r1, tsd_r1[0])
+
+        t_r2 = self.mat_data1['t_r2'].ravel()
+        d_r2 = self.mat_data1['d_r2'].ravel()
+        tsd_r2 = self.tsd.restrict(self.int2)
+        np.testing.assert_array_almost_equal_nulp(t_r2, tsd_r2.times())
+        np.testing.assert_array_almost_equal_nulp(d_r2, tsd_r2[0])
+
+
+
