@@ -250,6 +250,8 @@ class IntervalSetOpsTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal_nulp(int_diff2['start'], a_diff2)
         np.testing.assert_array_almost_equal_nulp(int_diff2['end'], b_diff2)
 
+    def drop_short(self):
+
 
 class TsdIntervalSetRestrictTestCase(unittest.TestCase):
     def setUp(self):

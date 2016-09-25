@@ -72,12 +72,14 @@ class Tsd(pd.DataFrame):
         rest_t = self.reindex(ix, method=method)
         return rest_t
 
-    def restrict(self, iset):
+    def restrict(self, iset, keep_labels=False):
         ix = iset.in_interval(self)
         tsd_r = pd.DataFrame(self, copy=True)
         tsd_r['interval'] = ix
         ix = ~np.isnan(ix)
         tsd_r = tsd_r[ix]
+        if not keep_labels:
+            del tsd_r['interval']
         return Tsd(tsd_r, copy=True)
 
 
