@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
 from warnings import warn
-from .time_series import format_timestamps
+from .time_series import format_timestamps, return_timestamps
 
 
 class IntervalSet(pd.DataFrame):
     """
     a DataFrame representing a (irregular) set of time intervals in elapsed time, with relative operations
     """
-    def __init__(self, start, end, time_units='usec', expect_fix=False, **kwargs):
+    def __init__(self, start, end, time_units=None, expect_fix=False, **kwargs):
         """
         makes a interval_set. if start and end and not aligned, meaning that len(start) == len(end),
         end[i] > start[i] and start[i+1] > end[i], or start and end are not sorted,
@@ -72,22 +72,14 @@ class IntervalSet(pd.DataFrame):
         e = self['end'].iloc[-1]
         return IntervalSet(s, e)
 
-    def tot_length(self, time_units='usec'):
+    def tot_length(self, time_units='us'):
         """
         Total elapsed time in the set
-        :param time_units: the time units to return the result in ('usec' [default], 'ms', 's')
+        :param time_units: the time units to return the result in ('us' [default], 'ms', 's')
         :return: the total length
         """
         tot_l = (self['end'] - self['start']).astype(np.float64).sum()
-        if time_units == 'usec':
-            pass
-        elif time_units == 'ms':
-            tot_l /= 1.e3
-        elif time_units == 's':
-            tot_l /= 1.e6
-        else:
-            raise ValueError("Unrecognized time units")
-        return tot_l
+        return return_timestamps(tot_l, time_units)
 
     def intersect(self, *a):
         """
