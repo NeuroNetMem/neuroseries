@@ -3,6 +3,8 @@ import numpy as np
 from warnings import warn
 
 
+
+
 def format_timestamps(t, time_units=None, give_warning=True):
 
     if not time_units:
@@ -85,7 +87,7 @@ class Tsd(pd.Series):
         ss = self.as_series()
         t = self.index.values
         t = return_timestamps(t, units)
-        ss.set_index(t, inplace=True)
+        ss.index = t
         return ss
 
     def data(self):
@@ -106,7 +108,7 @@ class Tsd(pd.Series):
         ix = ~np.isnan(ix)
         tsd_r = tsd_r[ix]
         if not keep_labels:
-            s = tsd_r.iloc[:,col]
+            s = tsd_r.iloc[:, col]
             return Tsd(s)
         return TsdFrame(tsd_r, copy=True)
 
