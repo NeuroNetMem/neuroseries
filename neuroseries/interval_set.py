@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
 from warnings import warn
-from .time_series import format_timestamps, return_timestamps
+from .time_series import TimeUnits, Range
 
 
 class IntervalSet(pd.DataFrame):
     """
     a DataFrame representing a (irregular) set of time intervals in elapsed time, with relative operations
     """
-    def __init__(self, start, end, time_units=None, expect_fix=False, **kwargs):
+    def __init__(self, start, end=None, time_units=None, expect_fix=False, **kwargs):
         """
         makes a interval_set. if start and end and not aligned, meaning that len(start) == len(end),
         end[i] > start[i] and start[i+1] > end[i], or start and end are not sorted,
@@ -17,11 +17,19 @@ class IntervalSet(pd.DataFrame):
         :param end: array containing the end of each interval
         :param expect_fix: if False, will give a warning when a fix is needed (default: False)
         """
-        start = format_timestamps(np.array(start, dtype=np.int64).ravel(), time_units,
-                                  give_warning=not expect_fix)
-        end = format_timestamps(np.array(end, dtype=np.int64).ravel(), time_units,
-                                give_warning=not expect_fix)
 
+        if end is None:
+            df = pd.DataFrame(start)
+            if 'start' not in df.columns or 'end' not in df.columns:
+                raise ValueError('wrong columns')
+            super().__init__(df, **kwargs)
+            self.r_cache = None
+            return
+
+        start = TimeUnits.format_timestamps(np.array(start, dtype=np.int64).ravel(), time_units,
+                                            give_warning=not expect_fix)
+        end = TimeUnits.format_timestamps(np.array(end, dtype=np.int64).ravel(), time_units,
+                                          give_warning=not expect_fix)
 
         to_fix = False
         msg = ''
@@ -61,7 +69,8 @@ class IntervalSet(pd.DataFrame):
 
         # super().__init__({'start': start, 'end': end}, **kwargs)
         # self = self[['start', 'end']]
-        super().__init__(data=np.vstack((start, end)).T, columns=('start', 'end'))
+        super().__init__(data=np.vstack((start, end)).T, columns=('start', 'end'), **kwargs)
+        self.r_cache = None
 
     def time_span(self):
         """
@@ -79,7 +88,7 @@ class IntervalSet(pd.DataFrame):
         :return: the total length
         """
         tot_l = (self['end'] - self['start']).astype(np.float64).sum()
-        return return_timestamps(tot_l, time_units)
+        return TimeUnits.return_timestamps(tot_l, time_units)
 
     def intersect(self, *a):
         """
@@ -176,3 +185,42 @@ class IntervalSet(pd.DataFrame):
         ix[np.floor(ix / 2) * 2 != ix] = np.NaN
         ix = np.floor(ix/2)
         return ix
+
+    def drop_short_intervals(self, threshold, time_units=None):
+        """
+        drops the short intervals in the interval set
+        :param threshold: time threshold for "short" intervals
+        :param time_units: the time units for the threshold
+        :return: a copied IntervalSet with the dropped intervals
+        """
+        threshold = TimeUnits.format_timestamps(np.array((threshold,), dtype=np.int64).ravel(), time_units)[0]
+        return self.ix[(self['end']-self['start']) > threshold]
+
+    def merge_close_intervals(self, threshold, time_units=None):
+        """
+        merges intervals that are very close
+        :param threshold: time threshold for the closeness of the intervals
+        :param time_units: time units for the threshold
+        :return: a copied IntervalSet with merged intervals
+        """
+        tsp = self.time_span()
+        i1 = tsp.set_diff(self)
+        i1 = i1.drop_short_intervals(threshold, time_units=time_units)
+        return tsp.set_diff(i1)
+
+    @property
+    def _constructor(self):
+        return IntervalSet
+
+    @property
+    def r(self):
+        if Range.interval is None:
+            raise ValueError('no range interval set')
+        if self.r_cache is None:
+            self.r_cache = self.intersect(Range.interval)
+            Range.cached_objects.append(self)
+
+        return self.r_cache
+
+    def invalidate_restrict_cache(self):
+        self.r_cache = None

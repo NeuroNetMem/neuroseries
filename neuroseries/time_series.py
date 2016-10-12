@@ -1,51 +1,86 @@
 import pandas as pd
 import numpy as np
 from warnings import warn
+from pandas.core.internals import SingleBlockManager
 
 
+class Range:
+    interval = None
+    cached_objects = []
+
+    def __init__(self, a, b=None, time_units=None):
+        if b:
+            start = TimeUnits.format_timestamps(np.array((a,), dtype=np.int64).ravel(), time_units)
+            end = TimeUnits.format_timestamps(np.array((b,), dtype=np.int64).ravel(), time_units)
+            from neuroseries.interval_set import IntervalSet
+            Range.interval = IntervalSet(start, end)
+        else:
+            Range.interval = a
+
+    def __enter__(self):
+        return Range.interval
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        Range.interval = None
+        for i in Range.cached_objects:
+            i.invalidate_restrict_cache()
+        self.cached_objects = []
 
 
-def format_timestamps(t, time_units=None, give_warning=True):
+class TimeUnits:
+    default_time_units = 'us'
 
-    if not time_units:
-        time_units = 'us'
+    def __init__(self, units):
+        TimeUnits.default_time_units = units
 
-    t = t.astype(np.float64)
-    if time_units == 'us':
-        pass
-    elif time_units == 'ms':
-        t *= 1000
-    elif time_units == 's':
-        t *= 1000000
-    else:
-        raise ValueError('unrecognized time units type')
-    t = t.round()
-    if isinstance(t, (pd.Series, pd.DataFrame)):
-        ts = t.index.values.astype(np.int64)
-    else:
-        ts = t.astype(np.int64)
+    def __enter__(self):
+        return self.default_time_units
 
-    ts = ts.reshape((len(ts),))
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        TimeUnits.default_time_units = 'us'
 
-    if not (np.diff(ts) >= 0).all():
-        if give_warning:
-            warn('timestamps are not sorted', UserWarning)
-        ts.sort()
-    return ts
+    @staticmethod
+    def format_timestamps(t, units=None, give_warning=True):
 
+        if not units:
+            units = TimeUnits.default_time_units
 
-def return_timestamps(t, units=None):
+        t = t.astype(np.float64)
+        if units == 'us':
+            pass
+        elif units == 'ms':
+            t *= 1000
+        elif units == 's':
+            t *= 1000000
+        else:
+            raise ValueError('unrecognized time units type')
+        t = t.round()
+        if isinstance(t, (pd.Series, pd.DataFrame)):
+            ts = t.index.values.astype(np.int64)
+        else:
+            ts = t.astype(np.int64)
 
-    if not units:
-        units = 'us'  # TODO fix with global unit setting mechanism
-    if units == 'us':
-        return t
-    elif units == 'ms':
-        return t / 1000.
-    elif units == 's':
-        return t / 1.0e6
-    else:
-        raise ValueError('Unrecognized units')
+        ts = ts.reshape((len(ts),))
+
+        if not (np.diff(ts) >= 0).all():
+            if give_warning:
+                warn('timestamps are not sorted', UserWarning)
+            ts.sort()
+        return ts
+
+    @staticmethod
+    def return_timestamps(t, units=None):
+
+        if not units:
+            units = TimeUnits.default_time_units
+        if units == 'us':
+            return t
+        elif units == 'ms':
+            return t / 1000.
+        elif units == 's':
+            return t / 1.0e6
+        else:
+            raise ValueError('Unrecognized units')
 
 
 def _get_restrict_method(align):
@@ -62,15 +97,16 @@ def _get_restrict_method(align):
 
 class Tsd(pd.Series):
     def __init__(self, t, d=None, time_units=None, **kwargs):
-        if isinstance(t, pd.Series):
+        if isinstance(t, (pd.Series, SingleBlockManager)):
             super().__init__(t, **kwargs)
         else:
-            t = format_timestamps(t, time_units)
+            t = TimeUnits.format_timestamps(t, time_units)
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
+        self.r_cache = None
 
     def times(self, units=None):
-        return return_timestamps(self.index.values.astype(np.float64), units)
+        return TimeUnits.return_timestamps(self.index.values.astype(np.float64), units)
 
     def as_series(self):
         """
@@ -80,14 +116,18 @@ class Tsd(pd.Series):
 
     def as_units(self, units=None):
         """
-        returns a DataFrame with time expressed in the desired unit
-        :param units: us (s), ms, or s
-        :return: DataFrame with adjusted times
+        returns a Series with time expressed in the desired unit
+        :param units: us, ms, or s
+        :return: Series with adjusted times
         """
         ss = self.as_series()
         t = self.index.values
-        t = return_timestamps(t, units)
+        t = TimeUnits.return_timestamps(t, units)
         ss.index = t
+        units_str = units
+        if not units_str:
+            units_str = 'us'
+        ss.index.name = "Time (" + units_str + ")"
         return ss
 
     def data(self):
@@ -95,7 +135,7 @@ class Tsd(pd.Series):
 
     def realign(self, t, align='closest'):
         method = _get_restrict_method(align)
-        ix = format_timestamps(t)
+        ix = TimeUnits.format_timestamps(t.index.values)
 
         rest_t = self.reindex(ix, method=method)
         return rest_t
@@ -112,19 +152,37 @@ class Tsd(pd.Series):
             return Tsd(s)
         return TsdFrame(tsd_r, copy=True)
 
+    @property
+    def r(self):
+        if Range.interval is None:
+            raise ValueError('no range interval set')
+        if self.r_cache is None:
+            self.r_cache = self.restrict(Range.interval)
+            Range.cached_objects.append(self)
+
+        return self.r_cache
+
+    def invalidate_restrict_cache(self):
+        self.r_cache = None
+
+    @property
+    def _constructor(self):
+        return Tsd
+
 
 # noinspection PyAbstractClass
 class TsdFrame(pd.DataFrame):
     def __init__(self, t, d=None, time_units=None, **kwargs):
-        if isinstance(t, pd.DataFrame):
+        if isinstance(t, (pd.Series, SingleBlockManager)):
             super().__init__(t, **kwargs)
         else:
-            t = format_timestamps(t, time_units)
+            t = TimeUnits.format_timestamps(t, time_units)
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
+        self.r_cache = None
 
     def times(self, units=None):
-        return return_timestamps(self.index.values.astype(np.float64), units)
+        return TimeUnits.return_timestamps(self.index.values.astype(np.float64), units)
 
     def as_dataframe(self):
         """
@@ -140,8 +198,12 @@ class TsdFrame(pd.DataFrame):
         """
         df = self.as_dataframe()
         t = self.index.values
-        t = return_timestamps(t, units)
+        t = TimeUnits.return_timestamps(t, units)
         df.set_index(t, inplace=True)
+        units_str = units
+        if not units_str:
+            units_str = 'us'
+        df.index.name = "Time (" + units_str + ")"
         return df
 
     def data(self):
@@ -151,7 +213,7 @@ class TsdFrame(pd.DataFrame):
 
     def realign(self, t, align='closest'):
         method = _get_restrict_method(align)
-        ix = format_timestamps(t)
+        ix = TimeUnits.format_timestamps(t)
 
         rest_t = self.reindex(ix, method=method)
         return rest_t
@@ -168,7 +230,20 @@ class TsdFrame(pd.DataFrame):
 
     @property
     def _constructor(self):
-        return Tsd
+        return TsdFrame
+
+    @property
+    def r(self):
+        if Range.interval is None:
+            raise ValueError('no range interval set')
+        if self.r_cache is None:
+            self.r_cache = self.restrict(Range.interval)
+            Range.cached_objects.append(self)
+
+        return self.r_cache
+
+    def invalidate_restrict_cache(self):
+        self.r_cache = None
 
 
 # noinspection PyAbstractClass
