@@ -362,6 +362,7 @@ class TsdSupportTestCase(unittest.TestCase):
 
     def test_gaps(self):
         gaps = self.t1.gaps(min_gap=500, method='absolute')
+        gaps = self.t1.gaps(500, method='absolute')
         st = gaps['start']
         en = gaps['end']
         np.testing.assert_array_almost_equal_nulp(st, np.array((499902, 2299901)))

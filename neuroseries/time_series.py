@@ -2,6 +2,33 @@ import pandas as pd
 import numpy as np
 from warnings import warn
 from pandas.core.internals import SingleBlockManager
+from pandas.core.base import AccessorProperty, PandasObject
+
+
+class BaseMethod(PandasObject):
+    def __init__(self, data):
+        self._data = data
+
+    @staticmethod
+    def func(*args, **kwargs):
+        raise NotImplementedError('shuold have a function')
+
+    def __call__(self, *args, **kwargs):
+        if len(args) == 0:
+            fc = self.func(self._data, **kwargs)
+        else:
+            fc = self.func(self._data, *args, **kwargs)
+        return fc
+    __doc__ = func.__doc__
+    __call__.__doc__ = func.__doc__
+
+
+def as_method(func):
+    name = func.__name__.capitalize() + 'Method'
+    cls = type(name, (BaseMethod,), {'func': staticmethod(func),
+                                     '__doc__': func.__doc__})
+    ap = AccessorProperty(cls, cls)
+    return ap
 
 
 class Range:
@@ -152,14 +179,6 @@ class Tsd(pd.Series):
             return Tsd(s)
         return TsdFrame(tsd_r, copy=True)
 
-
-
-
-
-
-
-
-
     @property
     def r(self):
         if Range.interval is None:
@@ -263,6 +282,7 @@ class Ts(Tsd):
 def gaps(data, min_gap, method='absolute'):
     """
     finds gaps in a tsd
+    :param data: a Tsd/TsdFrame
     :param min_gap: the minimum gap that will be considered
     :param method: 'absolute': min gap is expressed in time (us), 'median',
     min_gap expressed in units of the median inter-sample event
@@ -286,9 +306,14 @@ def gaps(data, min_gap, method='absolute'):
     return IntervalSet(st, en)
 
 
+# noinspection PyTypeChecker
+Tsd.gaps = as_method(gaps)
+
+
 def support(data, min_gap, method='absolute'):
     """
     find the smallest (to a min_gap resolution) IntervalSet containing all the times in the Tsd
+    :param data: a Tsd/TsdFrame
     :param min_gap: the minimum gap that will be considered
     :param method: 'absolute': min gap is expressed in time (us), 'median',
     min_gap expressed in units of the median inter-sample event
@@ -299,31 +324,9 @@ def support(data, min_gap, method='absolute'):
     t = data.times('us')
     from neuroseries.interval_set import IntervalSet
     span = IntervalSet(t[0] - 1, t[-1] + 1)
-    support = span.set_diff(here_gaps)
-    return support
+    support_here = span.set_diff(here_gaps)
+    return support_here
 
 
-from pandas.core.base import AccessorProperty, PandasObject
-
-
-class BaseMethod(PandasObject):
-    def __init__(self, data):
-        self._data = data
-
-
-class SupportMethod(BaseMethod):
-    def __call__(self, min_gap, method='absolute'):
-        return support(self._data, min_gap=min_gap, method=method)
-
-    __call__.__doc__ = gaps.__doc__
-
-
-class GapsMethod(BaseMethod):
-    def __call__(self, min_gap, method='absolute'):
-        return gaps(self._data, min_gap=min_gap, method=method)
-
-    __call__.__doc__ = support.__doc__
-
-Tsd.support = AccessorProperty(SupportMethod, SupportMethod)
-Tsd.gaps = AccessorProperty(GapsMethod, GapsMethod)
-
+# noinspection PyTypeChecker
+Tsd.support = as_method(support)
