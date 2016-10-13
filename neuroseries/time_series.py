@@ -152,6 +152,52 @@ class Tsd(pd.Series):
             return Tsd(s)
         return TsdFrame(tsd_r, copy=True)
 
+    def gaps(self, min_gap, method='absolute'):
+        """
+        finds gaps in a tsd
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet containing the gaps in the TSd
+        """
+        dt = np.diff(self.times(units='us'))
+
+        if method == 'absolute':
+            pass
+        elif method == 'median':
+            md = dt.median()
+            min_gap *= md
+        else:
+            raise ValueError('unrecognized method')
+
+        ix = np.where(dt > min_gap)
+        t = self.times()
+        st = t[ix] + 1
+        en = t[(np.array(ix)+1)] - 1
+        from neuroseries.interval_set import IntervalSet
+        return IntervalSet(st, en)
+
+    def support(self, min_gap, method='absolute'):
+        """
+        find the smallest (to a min_gap resolution) IntervalSet containing all the times in the Tsd
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet
+        """
+
+        gaps = self.gaps(min_gap, method=method)
+        t = self.times('us')
+        from neuroseries.interval_set import IntervalSet
+        span = IntervalSet(t[0]-1, t[-1]+1)
+        support = span.set_diff(gaps)
+        return support
+
+
+
+
+
+
     @property
     def r(self):
         if Range.interval is None:

@@ -348,6 +348,32 @@ class TsdUnitsTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal_nulp(self.tsd_t/1.e6, tsd_s.index.values)
 
 
+class TsdSupportTestCase(unittest.TestCase):
+    def setUp(self):
+        a1 = np.arange(1, 500000, 100)
+        a2 = np.arange(800000, 2300000, 100)
+        a3 = np.arange(5200000, 8900000, 100)
+        t = np.hstack((a1, a2, a3))
+        d = np.random.randn(*t.shape)
+        self.t1 = nts.Tsd(t, d)
+
+    def tearDown(self):
+        pass
+
+    def test_gaps(self):
+        gaps = self.t1.gaps(min_gap=500, method='absolute')
+        st = gaps['start']
+        en = gaps['end']
+        np.testing.assert_array_almost_equal_nulp(st, np.array((499902, 2299901)))
+        np.testing.assert_array_almost_equal_nulp(en, np.array((799999, 5199999)))
+
+    def test_support(self):
+        support = self.t1.support(min_gap=500, method='absolute')
+        np.testing.assert_array_almost_equal_nulp(support['start'], np.array((0, 799999, 5199999)))
+        np.testing.assert_array_almost_equal_nulp(support['end'], np.array((499902, 2299901, 8899901)))
+
+
+
 class TsdIntervalSetRestrictTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
