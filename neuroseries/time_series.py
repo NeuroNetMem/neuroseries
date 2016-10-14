@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from warnings import warn
-from pandas.core.internals import SingleBlockManager
+from pandas.core.internals import SingleBlockManager, BlockManager
 from pandas.core.base import AccessorProperty, PandasObject
 
 
@@ -81,10 +81,15 @@ class TimeUnits:
             t *= 1000000
         else:
             raise ValueError('unrecognized time units type')
-        t = t.round()
+
+        if isinstance(t, BlockManager):
+            t = pd.DataFrame(t, copy=True)
+
         if isinstance(t, (pd.Series, pd.DataFrame)):
             ts = t.index.values.astype(np.int64)
+            ts = ts.round()
         else:
+            t = t.round()
             ts = t.astype(np.int64)
 
         ts = ts.reshape((len(ts),))
@@ -200,7 +205,7 @@ class Tsd(pd.Series):
 # noinspection PyAbstractClass
 class TsdFrame(pd.DataFrame):
     def __init__(self, t, d=None, time_units=None, **kwargs):
-        if isinstance(t, (pd.Series, SingleBlockManager)):
+        if isinstance(t, (pd.DataFrame, SingleBlockManager, BlockManager)):
             super().__init__(t, **kwargs)
         else:
             t = TimeUnits.format_timestamps(t, time_units)
@@ -242,7 +247,7 @@ class TsdFrame(pd.DataFrame):
         method = _get_restrict_method(align)
         ix = TimeUnits.format_timestamps(t)
 
-        rest_t = self.reindex(ix, method=method)
+        rest_t = self.reindex(ix, method=method, columns=self.columns.values)
         return rest_t
 
     def restrict(self, iset, keep_labels=False):
@@ -258,6 +263,10 @@ class TsdFrame(pd.DataFrame):
     @property
     def _constructor(self):
         return TsdFrame
+
+    @property
+    def _constructor_sliced(self):
+        return Tsd
 
     @property
     def r(self):
@@ -308,7 +317,7 @@ def gaps(data, min_gap, method='absolute'):
 
 # noinspection PyTypeChecker
 Tsd.gaps = as_method(gaps)
-
+TsdFrame.gaps = as_method(gaps)
 
 def support(data, min_gap, method='absolute'):
     """
@@ -330,3 +339,4 @@ def support(data, min_gap, method='absolute'):
 
 # noinspection PyTypeChecker
 Tsd.support = as_method(support)
+TsdFrame.support = as_method(support)

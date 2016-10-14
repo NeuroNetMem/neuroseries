@@ -1,5 +1,5 @@
 import unittest
-
+from nose_parameterized import parameterized
 import numpy as np
 import pandas as pd
 import neuroseries as nts
@@ -112,52 +112,68 @@ class TsRestrictTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_realign(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_realign(self, data_class):
         """
         first simple realign case
         """
 
         d_a = self.mat_data1['d_a']
         d_a = d_a.reshape((len(d_a),))
-        t_a = nts.Tsd(self.mat_data1['t_a'].astype(np.int64), d_a)
+        t_a = data_class(self.mat_data1['t_a'].astype(np.int64), d_a)
         t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b, align='closest')
         dt = self.mat_data1['d_closest'].reshape((len(self.mat_data1['d_closest'],)))
-        self.assertTrue((t_closest.values != dt).sum() < 10)
-        np.testing.assert_array_almost_equal_nulp(t_closest.values, dt)
+        self.assertTrue((t_closest.values.ravel() != dt).sum() < 10)
+        np.testing.assert_array_almost_equal_nulp(t_closest.values.ravel(), dt)
 
         t_next = t_a.realign(t_b, align='next')
         dt = self.mat_data1['d_next'].reshape((len(self.mat_data1['d_next'],)))
-        np.testing.assert_array_almost_equal_nulp(t_next.values, dt)
+        np.testing.assert_array_almost_equal_nulp(t_next.values.ravel(), dt)
 
         t_prev = t_a.realign(t_b, align='prev')
         dt = self.mat_data1['d_prev'].reshape((len(self.mat_data1['d_prev'],)))
-        np.testing.assert_array_almost_equal_nulp(t_prev.values, dt)
+        np.testing.assert_array_almost_equal_nulp(t_prev.values.ravel(), dt)
 
-    def test_realign_left(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_realign_left(self, data_class):
         d_a = self.mat_data_left['d_a']
         d_a = d_a.reshape((len(d_a),))
-        t_a = nts.Tsd(self.mat_data_left['t_a'].astype(np.int64), d_a)
+        t_a = data_class(self.mat_data_left['t_a'].astype(np.int64), d_a)
         t_b = nts.Ts(self.mat_data_left['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b)
-        dt = self.mat_data_left['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
-        self.assertTrue((t_closest.values != dt).sum() < 10)
-        np.testing.assert_array_almost_equal_nulp(t_closest.values, dt)
+        dt = self.mat_data_left['d_closest'].ravel()
+        self.assertTrue((t_closest.values.ravel() != dt).sum() < 10)
+        np.testing.assert_array_almost_equal_nulp(t_closest.values.ravel(), dt)
 
-    def test_realign_right(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_realign_right(self, data_class):
         d_a = self.mat_data_right['d_a']
         d_a = d_a.reshape((len(d_a),))
-        t_a = nts.Tsd(self.mat_data_right['t_a'].astype(np.int64), d_a)
+        t_a = data_class(self.mat_data_right['t_a'].astype(np.int64), d_a)
         t_b = nts.Ts(self.mat_data_right['t_b'].astype(np.int64))
         t_closest = t_a.realign(t_b)
-        dt = self.mat_data_right['d_closest'].reshape((len(self.mat_data1['d_closest'], )))
-        self.assertTrue((t_closest.values != dt).sum() < 10)
-        np.testing.assert_array_almost_equal_nulp(t_closest.values, dt)
+        dt = self.mat_data_right['d_closest'].ravel()
+        self.assertTrue((t_closest.values.ravel() != dt).sum() < 10)
+        np.testing.assert_array_almost_equal_nulp(t_closest.values.ravel(), dt)
 
-    def test_realign_wrong_units(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_realign_wrong_units(self, data_class):
         d_a = self.mat_data1['d_a']
         d_a = d_a.reshape((len(d_a),))
-        t_a = nts.Tsd(self.mat_data1['t_a'].astype(np.int64), d_a)
+        t_a = data_class(self.mat_data1['t_a'].astype(np.int64), d_a)
         t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
         t_closest = 1
         with self.assertRaises(ValueError):
@@ -305,20 +321,30 @@ class TsdUnitsTestCase(unittest.TestCase):
         self.mat_data1 = loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
         self.tsd_t = self.mat_data1['t'].ravel()
         self.tsd_d = self.mat_data1['d'].ravel()
-        self.tsd = nts.Tsd(self.tsd_t, self.tsd_d)
 
-    def test_as_dataframe(self):
-
-        df = self.tsd.as_series()
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_as_dataframe(self, data_class):
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
+        if data_class == nts.Tsd:
+            df = self.tsd.as_series()
+        else:
+            df = self.tsd.as_dataframe()
         np.testing.assert_array_almost_equal_nulp(df.values, self.tsd.values)
         np.testing.assert_array_almost_equal_nulp(df.index.values, self.tsd.index.values)
 
-    def test_units_context(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_units_context(self, data_class):
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
         with nts.TimeUnits('ms'):
             t = self.tsd.times()
             # noinspection PyTypeChecker
             np.testing.assert_array_almost_equal_nulp(self.tsd_t/1000., t)
-
 
     @staticmethod
     def test_times_units_ts():
@@ -333,13 +359,21 @@ class TsdUnitsTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal_nulp(a/1000., ts.times('ms'))
         np.testing.assert_array_almost_equal_nulp(a/1.e6, ts.times('s'))
 
-    def test_asunits_ts(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_asunits_ts(self, data_class):
         """
         astype returns tsd dataframe
         :return:
         """
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
         tsd_ms = self.tsd.as_units('ms')
-        self.assertIsInstance(tsd_ms, pd.Series)
+        if data_class == nts.Tsd:
+            self.assertIsInstance(tsd_ms, pd.Series)
+        else:
+            self.assertIsInstance(tsd_ms, pd.DataFrame)
         # noinspection PyTypeChecker
         np.testing.assert_array_almost_equal_nulp(self.tsd_t/1000., tsd_ms.index.values)
 
@@ -353,14 +387,18 @@ class TsdSupportTestCase(unittest.TestCase):
         a1 = np.arange(1, 500000, 100)
         a2 = np.arange(800000, 2300000, 100)
         a3 = np.arange(5200000, 8900000, 100)
-        t = np.hstack((a1, a2, a3))
-        d = np.random.randn(*t.shape)
-        self.t1 = nts.Tsd(t, d)
+        self.t = np.hstack((a1, a2, a3))
+        self.d = np.random.randn(*self.t.shape)
 
     def tearDown(self):
         pass
 
-    def test_gaps(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_gaps(self, data_class):
+        self.t1 = data_class(self.t, self.d)
         gaps = self.t1.gaps(min_gap=500, method='absolute')
         gaps = self.t1.gaps(500, method='absolute')
         st = gaps['start']
@@ -368,11 +406,15 @@ class TsdSupportTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal_nulp(st, np.array((499902, 2299901)))
         np.testing.assert_array_almost_equal_nulp(en, np.array((799999, 5199999)))
 
-    def test_support(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_support(self, data_class):
+        self.t1 = data_class(self.t, self.d)
         support = self.t1.support(min_gap=500, method='absolute')
         np.testing.assert_array_almost_equal_nulp(support['start'], np.array((0, 799999, 5199999)))
         np.testing.assert_array_almost_equal_nulp(support['end'], np.array((499902, 2299901, 8899901)))
-
 
 
 class TsdIntervalSetRestrictTestCase(unittest.TestCase):
@@ -396,25 +438,35 @@ class TsdIntervalSetRestrictTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testRestrict(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def testRestrict(self, data_class):
         """
         IntervalSet restrict of tsd
         """
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
         t_r1 = self.mat_data1['t_r1'].ravel()
         d_r1 = self.mat_data1['d_r1'].ravel()
         tsd_r1 = self.tsd.restrict(self.int1)
-        self.assertIsInstance(tsd_r1, nts.Tsd)
+        self.assertIsInstance(tsd_r1, data_class)
         self.assertEqual(tsd_r1.index.name, "Time (us)")
         np.testing.assert_array_almost_equal_nulp(t_r1, tsd_r1.times())
-        np.testing.assert_array_almost_equal_nulp(d_r1, tsd_r1.values)
+        np.testing.assert_array_almost_equal_nulp(d_r1, tsd_r1.values.ravel())
 
         t_r2 = self.mat_data1['t_r2'].ravel()
         d_r2 = self.mat_data1['d_r2'].ravel()
         tsd_r2 = self.tsd.restrict(self.int2)
         np.testing.assert_array_almost_equal_nulp(t_r2, tsd_r2.times())
-        np.testing.assert_array_almost_equal_nulp(d_r2, tsd_r2.values)
+        np.testing.assert_array_almost_equal_nulp(d_r2, tsd_r2.values.ravel())
 
-    def testRange(self):
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def testRange(self, data_class):
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
         range_interval = nts.IntervalSet(9.e8, 3.e9)
 
         int1_r = self.int1.intersect(range_interval)
