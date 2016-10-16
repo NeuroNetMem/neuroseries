@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from warnings import warn
-from .time_series import TimeUnits, Range
+from .time_series import TimeUnits, Range, as_method, store
 
 
 class IntervalSet(pd.DataFrame):
@@ -24,6 +24,8 @@ class IntervalSet(pd.DataFrame):
                 raise ValueError('wrong columns')
             super().__init__(df, **kwargs)
             self.r_cache = None
+            self._metadata = ['nts_class']
+            self.nts_class = self.__class__.__name__ # TODO eliminate code repetition
             return
 
         start = TimeUnits.format_timestamps(np.array(start, dtype=np.int64).ravel(), time_units,
@@ -71,6 +73,8 @@ class IntervalSet(pd.DataFrame):
         # self = self[['start', 'end']]
         super().__init__(data=np.vstack((start, end)).T, columns=('start', 'end'), **kwargs)
         self.r_cache = None
+        self._metadata = ['nts_class']
+        self.nts_class = self.__class__.__name__
 
     def time_span(self):
         """
@@ -224,3 +228,14 @@ class IntervalSet(pd.DataFrame):
 
     def invalidate_restrict_cache(self):
         self.r_cache = None
+
+    def __iter__(self):
+        self.iter_r = self.iterrows()
+        return self
+
+    def __next__(self):
+        n = next(self.iter_r)[1]
+        return IntervalSet(n['start'], n['end'])
+
+
+IntervalSet.store = as_method(store)

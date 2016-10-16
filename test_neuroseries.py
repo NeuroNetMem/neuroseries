@@ -212,6 +212,19 @@ class IntervalSetOpsTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal_nulp(a_i2, self.int2['start'])
         np.testing.assert_array_almost_equal_nulp(b_i2, self.int2['end'])
 
+    def test_create_interval_set_from_scalars(self):
+        int1 = nts.IntervalSet(100, 2100)
+        self.assertIsInstance(int1, nts.IntervalSet)
+        np.testing.assert_array_almost_equal_nulp(np.array((100,)), int1['start'])
+        np.testing.assert_array_almost_equal_nulp(np.array((2100,)), int1['end'])
+
+    def test_iterator(self):
+        a_i1 = self.mat_data1['a_i1'].ravel().astype(np.int64)
+        b_i1 = self.mat_data1['b_i1'].ravel().astype(np.int64)
+        for i, int_i in enumerate(self.int1):
+            self.assertEqual(a_i1[i], int_i['start'].values)
+            self.assertEqual(b_i1[i], int_i['end'].values)
+
     def test_timespan_tot_length(self):
         """
         return the total length and the timespan of the interval set
@@ -399,7 +412,6 @@ class TsdSupportTestCase(unittest.TestCase):
     ])
     def test_gaps(self, data_class):
         self.t1 = data_class(self.t, self.d)
-        gaps = self.t1.gaps(min_gap=500, method='absolute')
         gaps = self.t1.gaps(500, method='absolute')
         st = gaps['start']
         en = gaps['end']
@@ -487,7 +499,6 @@ class TsdIntervalSetRestrictTestCase(unittest.TestCase):
             np.testing.assert_array_almost_equal_nulp(self.tsd.r.times(), tsd_r.times())
             np.testing.assert_array_almost_equal_nulp(self.int1.r['start'], int1_r['start'])
             np.testing.assert_array_almost_equal_nulp(self.int1.r['end'], int1_r['end'])
-
             np.testing.assert_array_almost_equal_nulp(self.tsd.r.restrict(self.int1.r).times(),
                                                       tsd_r_r1.times())
 
@@ -496,3 +507,91 @@ class TsdIntervalSetRestrictTestCase(unittest.TestCase):
 
         with nts.Range(9.e8, 3.e9):
             np.testing.assert_array_almost_equal_nulp(self.tsd.r.times(), tsd_r.times())
+
+
+# noinspection PyBroadException
+class HDFStoreTestCase(unittest.TestCase):
+    def setUp(self):
+        from scipy.io import loadmat
+        self.mat_data1 = loadmat(
+            '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+
+        import os.path
+        try:
+            os.remove('store.h5')
+        except:
+            pass
+        self.store = pd.HDFStore('store.h5')
+
+        self.a1 = self.mat_data1['a1'].ravel()
+        self.b1 = self.mat_data1['b1'].ravel()
+        self.int1 = nts.IntervalSet(self.a1, self.b1, expect_fix=True)
+
+        self.a2 = self.mat_data1['a2'].ravel()
+        self.b2 = self.mat_data1['b2'].ravel()
+        self.int2 = nts.IntervalSet(self.a2, self.b2, expect_fix=True)
+
+        self.tsd_t = self.mat_data1['t'].ravel()
+        self.tsd_d = self.mat_data1['d'].ravel()
+
+    def tearDown(self):
+        import os
+        try:
+            os.remove('store.h5')
+        except:
+            pass
+
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_read_write(self, data_class):
+        from scipy.io import loadmat
+        self.mat_data1 = loadmat(
+            '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
+
+        self.int1.store(self.store, 'int1')
+        self.int2.store(self.store, 'int2')
+        self.tsd.store(self.store, 'tsd')
+
+        self.store.close()
+
+        with pd.HDFStore('store.h5') as store:
+            k = store.keys()
+            self.assertIn('/int1', k)
+            self.assertIn('/int2', k)
+            self.assertIn('/tsd', k)
+            vars = nts.extract_from_HDF(store)
+            self.assertIn('int1', vars)
+            self.assertIn('int2', vars)
+            self.assertIn('tsd', vars)
+            self.assertIsInstance(vars['int1'], nts.IntervalSet)
+            self.assertIsInstance(vars['tsd'], data_class)
+            np.testing.assert_array_almost_equal_nulp(self.int1['start'], vars['int1']['start'])
+            np.testing.assert_array_almost_equal_nulp(self.int1['end'], vars['int1']['end'])
+            np.testing.assert_array_almost_equal_nulp(self.int2['start'], vars['int2']['start'])
+            np.testing.assert_array_almost_equal_nulp(self.int2['end'], vars['int2']['end'])
+            np.testing.assert_array_almost_equal_nulp(self.tsd.index.values,
+                                                      vars['tsd'].index.values)
+            np.testing.assert_array_almost_equal_nulp(self.tsd.values,
+                                                      vars['tsd'].values)
+
+    @parameterized.expand([
+        (nts.Tsd,),
+        (nts.TsdFrame,)
+    ])
+    def test_metadata(self, data_class):
+        from scipy.io import loadmat
+        self.mat_data1 = loadmat(
+            '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+
+        self.tsd = data_class(self.tsd_t, self.tsd_d)
+
+        self.int1.store(self.store, 'int1')
+        self.tsd.store(self.store, 'tsd')
+
+        with pd.HDFStore('store.h5') as store:
+            vars = nts.extract_from_HDF(store)
+        self.assertEqual(vars['int1'].nts_class, 'IntervalSet')

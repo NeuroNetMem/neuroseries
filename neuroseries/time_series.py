@@ -5,6 +5,9 @@ from pandas.core.internals import SingleBlockManager, BlockManager
 from pandas.core.base import AccessorProperty, PandasObject
 
 
+use_pandas_metadata = True
+
+
 class BaseMethod(PandasObject):
     def __init__(self, data):
         self._data = data
@@ -135,6 +138,8 @@ class Tsd(pd.Series):
             t = TimeUnits.format_timestamps(t, time_units)
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
+        self._metadata.append("nts_class")
+        self.nts_class = self.__class__.__name__
         self.r_cache = None
 
     def times(self, units=None):
@@ -211,6 +216,8 @@ class TsdFrame(pd.DataFrame):
             t = TimeUnits.format_timestamps(t, time_units)
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
+        self._metadata.append("nts_class")
+        self.nts_class = self.__class__.__name__
         self.r_cache = None
 
     def times(self, units=None):
@@ -286,6 +293,7 @@ class TsdFrame(pd.DataFrame):
 class Ts(Tsd):
     def __init__(self, t, time_units=None, **kwargs):
         super().__init__(t, None, time_units=time_units, **kwargs)
+        self.nts_class = self.__class__.__name__
 
 
 def gaps(data, min_gap, method='absolute'):
@@ -317,7 +325,9 @@ def gaps(data, min_gap, method='absolute'):
 
 # noinspection PyTypeChecker
 Tsd.gaps = as_method(gaps)
+# noinspection PyTypeChecker
 TsdFrame.gaps = as_method(gaps)
+
 
 def support(data, min_gap, method='absolute'):
     """
@@ -339,4 +349,47 @@ def support(data, min_gap, method='absolute'):
 
 # noinspection PyTypeChecker
 Tsd.support = as_method(support)
+# noinspection PyTypeChecker
 TsdFrame.support = as_method(support)
+
+
+def filter_time_series(data, columns=None):
+    pass
+
+
+def store(data, the_store, key):
+    if isinstance(data, Tsd):
+        data_to_store = data.as_series()
+    else:
+        data_to_store = pd.DataFrame(data)
+
+    the_store[key] = data_to_store
+    metadata = {k: getattr(data, k) for k in data._metadata}
+    the_store.get_storer(key).attrs.metadata = metadata
+
+
+# noinspection PyTypeChecker
+Tsd.store = as_method(store)
+# noinspection PyTypeChecker
+TsdFrame.store = as_method(store)
+
+
+def extract_from_HDF(storer):
+    from neuroseries.interval_set import IntervalSet
+    ks = storer.keys()
+    extractable_classes = [Ts, Tsd, TsdFrame, IntervalSet]
+    extractable_classes_id = {c.__name__: c for c in extractable_classes}
+
+    variables = {}
+    for k in ks:
+        k = k[1:]
+        v = storer[k]
+        attr = storer.get_storer(k).attrs
+        if hasattr(attr, 'metadata') and \
+            'nts_class' in attr.metadata and \
+            attr.metadata['nts_class'] in extractable_classes_id:
+            variables[k] = extractable_classes_id[attr.metadata['nts_class']](v)
+
+        if hasattr(v, 'nts_class') and v.nts_class in extractable_classes_id:
+            variables[k] = extractable_classes_id[v.nts_class](v)
+    return variables
