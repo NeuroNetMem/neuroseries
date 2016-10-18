@@ -8,3 +8,4 @@ coverage
 **/.DS_Store
 scratch
 notebooks
+store.h5
