@@ -3,9 +3,8 @@ import os.path
 import git
 import os
 import sys
-import json
 from subprocess import Popen, PIPE
-# from os.path import basename, isdir, join
+import os.path
 
 ROOT_PREFIX = None
 
@@ -32,6 +31,11 @@ def get_caller_test():
 
 
 def get_caller(back=1):
+    """
+    get the main parameters of a callign function
+    :param back: how many frames back in the stack you should go
+    :return: a dict with fields 'filename', 'lineno', and 'function'
+    """
     frame_caller = inspect.stack()[back]
     caller = {'filename': frame_caller[1], 'lineno': frame_caller[2],
               'function': frame_caller[3]}
@@ -39,14 +43,24 @@ def get_caller(back=1):
 
 
 def get_entry_point():
+    """
+    get the entry point of a python script
+    :return: a dict with fields: 'entry_script': the filename of the entry script,
+    'entry_args': the arguments list with which it was called
+    """
     frame_entry = inspect.stack()[-1]
     import sys
     entry = {'entry_script': frame_entry[1], 'entry_args': sys.argv}
     return entry
 
 
-def get_repo(filename):
-    repo = git.Repo(os.path.dirname(filename), search_parent_directories=True)
+def get_repo_info(dirname):
+    """
+    find the repository that contains the given directory
+    :param dirname: directory to be examined
+    :return: a dict with fields 'working_tree_dir': hte
+    """
+    repo = git.Repo(os.path.dirname(dirname), search_parent_directories=True)
     is_dirty = repo.is_dirty()
     repo_info = {'working_tree_dir': repo.working_tree_dir, 'commit': repo.head.ref.commit.hexsha,
                  'remote': repo.remotes.origin.url}
@@ -54,9 +68,12 @@ def get_repo(filename):
 
 
 def in_ipynb():
+    """
+    determines if we are running within a ipython notebook
+    :return: True if we are running in a notebook, False otherwise
+    """
     try:
-        pass
-        # cfg = get_ipython().config
+        cfg = get_ipython().config
         # if cfg['IPKernelApp']['parent_appname'] == 'ipython-notebook':
         #     return True
         # else:
@@ -66,16 +83,102 @@ def in_ipynb():
         return False
 
 
-def run_magic():
+def run_magic(magic_string="timeit abs(-42)"):
+    """
+    runs a ipython magic command
+    :param magic_string: the magic commmand
+    :return: None
+    """
     from IPython import get_ipython
     ipython = get_ipython()
     if ipython:
-        ipython.magic("timeit abs(-42)")
+        ipython.magic(magic_string)
+
+
+def fetch_notebook_name():
+    """
+    Fetches the notebook name via javascript so that it is available to get_notebook_name from the next cell
+    :return: None
+    """
+    from IPython import get_ipython
+    ipython = get_ipython()
+    if ipython:
+        ipython.run_cell_magic('javascript', '',
+                               """
+var kernel = Jupyter.notebook.kernel;
+var command = ["notebookPath = ",
+    "'", window.document.body.dataset.notebookPath, "'" ].join('')
+kernel.execute(command)
+var command = ["notebookName = ",
+    "'", window.document.body.dataset.notebookName, "'" ].join('')
+kernel.execute(command)
+""")
+
+
+def get_notebook_name(prefix=None):
+    """
+    Obtains ipython notebook path and name. This is an ugly hack, with an unfriendly user interface, but it is
+    apparently the best we can do since jupyter doesn't expose the notebook path other than via javascript from the
+    browser, and that has its own limitations. In order for this to work properly, the user must:
+     1. Start the notebook server (under unix as jupyter notebook) from your home directory. If you choose not to do so
+        then you have to specify the directory from which the server was started as the prefix argument here.
+     2. reload the notebook in the browser after renaming the notebook, otherwise you will get a non-upadted name.
+     3. in a *previous cell* call save_notebook or fetch_notebook_name. The notebook name won't be available to this
+        function until the cell in which one of these two function has been called has completed execution.
+
+    :param prefix: the directory from which the notebook server
+    :return: notebook_name: the notebook file name
+    notebook_path: the notebook path name
+    """
+    if not prefix:
+        prefix = os.path.expanduser("~")
+
+    stack = inspect.stack()
+    notebook_path = ''
+    notebook_name = ''
+    for back in range(1, len(stack)):
+        frame_caller = stack[back]
+        print(frame_caller[0].f_locals.keys())
+        try:
+            notebook_name = frame_caller[0].f_locals['notebookName']
+            notebook_path = frame_caller[0].f_locals['notebookPath']
+            notebook_path = os.path.join(prefix, notebook_path)
+            break
+        except KeyError:
+            pass
+
+    if notebook_name == '':
+        raise RuntimeError("""Could not retrieve notebook path.
+    If you are running a notebook, you need to call fetch_notebook or save_notebook from a previous cell.""")
+
+    return notebook_name, notebook_path
+
+
+def save_notebook():
+    """
+    Forces saving of the ipython notebook, raises RunTimeError if not in notebook,
+    Also fetches the notebook name
+    :return: None
+    """
+    from IPython import get_ipython
+    ipython = get_ipython()
+    if ipython:
+        ipython.run_cell_magic('javascript', '',
+                               """IPython.notebook.save_notebook();""")
+        fetch_notebook_name()
+    else:
+        raise RuntimeError("Apparently not running a notebook at the moment")
 
 
 def call_conda(extra_args, abspath=True):
+    """
+    calls conda in the virtual env where we are running from
+    :param extra_args: the arguments to the conda call
+    :param abspath: if True runs from the absolute path
+    :return: stdout, stderr streams with conda output
+    """
     # call conda with the list of extra arguments, and return the tuple
-    # stdout, stderr
+    # stdout, stderr (adapted from conda-api code)
 
     if abspath:
         if sys.platform == 'win32':
@@ -99,14 +202,6 @@ def call_conda(extra_args, abspath=True):
     except OSError:
         raise Exception("could not invoke %r\n" % extra_args)
     return p.communicate()
-
-
-def call_and_parse(extra_args, abspath=True):
-    sout, serr = call_conda(extra_args, abspath=abspath)
-    if stderr.decode().strip():
-        raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args,
-                                                         stderr.decode()))
-    return json.loads(stdout.decode())
 
 
 if __name__ == '__main__':
