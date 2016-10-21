@@ -3,7 +3,6 @@ resources
 .coverage
 __pycache__
 *.egg-info
-**/__pycache__
 coverage
 **/.DS_Store
 scratch

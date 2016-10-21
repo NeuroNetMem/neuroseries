@@ -9,6 +9,9 @@ use_pandas_metadata = True
 
 
 class BaseMethod(PandasObject):
+    """
+    class for converting functions into methods.
+    """
     def __init__(self, data):
         self._data = data
 
@@ -27,6 +30,11 @@ class BaseMethod(PandasObject):
 
 
 def as_method(func):
+    """
+    converts a function into a method
+    :param func: a function
+    :return: a method
+    """
     name = func.__name__.capitalize() + 'Method'
     cls = type(name, (BaseMethod,), {'func': staticmethod(func),
                                      '__doc__': func.__doc__})
@@ -35,6 +43,9 @@ def as_method(func):
 
 
 class Range:
+    """
+    a class defining a range to restrict analyses
+    """
     interval = None
     cached_objects = []
 
@@ -154,6 +165,7 @@ class Tsd(pd.Series):
     def as_units(self, units=None):
         """
         returns a Series with time expressed in the desired unit
+
         :param units: us, ms, or s
         :return: Series with adjusted times
         """

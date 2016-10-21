@@ -204,6 +204,14 @@ def call_conda(extra_args, abspath=True):
     return p.communicate()
 
 
+def get_environment_yml():
+    """
+    gets the current environment in a form that can be used by conda to replicate it
+    :return: a string including the content of the environment.yml file
+    """
+    s_out, s_err = call_conda(('env', 'export'))
+    return s_out.decode()
+
 if __name__ == '__main__':
 
     stdout, stderr = call_conda(('env', 'export'))
