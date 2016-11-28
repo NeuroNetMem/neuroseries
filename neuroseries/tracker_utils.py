@@ -87,7 +87,8 @@ def is_repo_notebook_clean():
     changed_file = d[0].a_path
 
     _, notebook_path = get_notebook_name()
-    working_tree = neuroseries.track_info['repos'][0]['working_tree_dir']
+    from .data_manager import track_info
+    working_tree = track_info['repos'][0]['working_tree_dir']
     notebook_name = os.path.relpath(notebook_path, working_tree)
 
     if changed_file != notebook_name:
