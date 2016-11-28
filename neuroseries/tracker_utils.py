@@ -85,7 +85,14 @@ def is_repo_notebook_clean():
         return False
 
     changed_file = d[0].a_path
-    print(changed_file)
+
+    _, notebook_path = get_notebook_name()
+    working_tree = neuroseries.track_info['repos'][0]['working_tree_dir']
+    notebook_name = os.path.relpath(notebook_path, working_tree)
+
+    if changed_file != notebook_name:
+        return False
+
     # TODO compare with notebook name
     return True
 
@@ -151,18 +158,20 @@ def get_notebook_name(prefix=None):
     3. in a *previous cell* call save_notebook or fetch_notebook_name. The notebook name won't be available to this
     function until the cell in which one of these two function has been called has completed execution.
 
-    :param prefix: the directory from which the notebook server
+    :param prefix: the directory from which the notebook server is started
+    (by default, the root of the git repo)
     :return: notebook_name: the notebook file name notebook_path: the notebook path name
     """
     if not prefix:
-        prefix = os.path.expanduser("~")
+        from .data_manager import track_info
+        prefix = track_info['repos'][0]['working_tree_dir']
 
     stack = inspect.stack()
     notebook_path = ''
     notebook_name = ''
     for back in range(1, len(stack)):
         frame_caller = stack[back]
-        print(frame_caller[0].f_locals.keys())
+        # print(frame_caller[0].f_locals.keys())
         try:
             notebook_name = frame_caller[0].f_locals['notebookName']
             notebook_path = frame_caller[0].f_locals['notebookPath']
