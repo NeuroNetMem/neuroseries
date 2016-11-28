@@ -60,7 +60,8 @@ def get_repo_info(dirname):
     :param dirname: directory to be examined
     :return: a dict with fields 'working_tree_dir': hte
     """
-    repo = git.Repo(os.path.dirname(dirname), search_parent_directories=True)
+
+    repo = git.Repo(dirname, search_parent_directories=True)
     is_dirty = repo.is_dirty()
     repo_info = {'working_tree_dir': repo.working_tree_dir, 'commit': repo.head.ref.commit.hexsha,
                  'remote': repo.remotes.origin.url}

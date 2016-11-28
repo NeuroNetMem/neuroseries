@@ -25,7 +25,7 @@ def _get_init_info():
     # except for the notebook itself (which may be committed at the save time) TODO
     repos = []
 
-    script_repo_info, is_dirty, script_repo = get_repo_info(os.path(info['entry_point']))
+    script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
 
     if is_dirty and not in_ipynb():
         raise RuntimeError("""Running from a dirty git repository (and not from a notebook).
