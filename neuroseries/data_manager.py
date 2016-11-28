@@ -21,8 +21,8 @@ def _get_init_info():
     info['args'] = sys.argv[1:]
 
     # get git status, if it's a script, this should be completely committed,
-    # if it's a notebook everything should be committed
-    # except for the notebook itself (which may be committed at the save time) TODO
+    # if it's a notebook everything should be committed TODO
+    # except for the notebook itself (which may be committed at the save time)
     repos = []
 
     script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
