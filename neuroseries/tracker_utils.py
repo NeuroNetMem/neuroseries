@@ -68,6 +68,26 @@ def get_repo_info(dirname):
     return repo_info, is_dirty, repo
 
 
+def is_repo_notebook_clean():
+    """
+    Tells you whether the script repository is clean except for the current notebook
+    Returns: True if the repo is clean
+
+    """
+
+    from neuroseries import info
+    script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
+    if not is_dirty:
+        return True
+
+    d = script_repo.index.diff(None)
+    if len(d) > 1:
+        return False
+
+    changed_file = d[0].a_path
+
+
+
 def in_ipynb():
     """
     determines if we are running within a ipython notebook
