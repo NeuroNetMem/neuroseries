@@ -75,8 +75,8 @@ def is_repo_notebook_clean():
 
     """
 
-    from neuroseries import info
-    script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
+    from neuroseries import track_info
+    script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(track_info['entry_point']))
     if not is_dirty:
         return True
 
@@ -85,7 +85,9 @@ def is_repo_notebook_clean():
         return False
 
     changed_file = d[0].a_path
-
+    print(changed_file)
+    # TODO compare with notebook name
+    return True
 
 
 def in_ipynb():

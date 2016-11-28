@@ -63,7 +63,7 @@ project = 'Neuroseries'
 copyright = '2016, Francesco Battaglia'
 author = 'Francesco Battaglia'
 
-# The version info for the project you're documenting, acts as replacement for
+# The version track_info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #

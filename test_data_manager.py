@@ -16,5 +16,5 @@ class DataManagerStartupTestCase(unittest.TestCase):
         testargs = [cur_file, 1]
         with patch('sys.argv', testargs):
             import neuroseries
-            print(neuroseries.info)
+            print(neuroseries.track_info)
         self.fail('not yet implemented')

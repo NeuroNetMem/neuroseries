@@ -1,6 +1,7 @@
-from .tracker_utils import get_repo_info, in_ipynb
+from .tracker_utils import get_repo_info, in_ipynb, get_environment_yml
 
 
+# noinspection PyProtectedMember
 def _get_init_info():
     # this gets all the needed information at the beginning of the run
     info = {}
@@ -49,17 +50,24 @@ def _get_init_info():
             raise RuntimeError("Dependency repository " + r + "is dirty, please commit!")
         repos.append(script_repo_info)
 
-
     info['repos'] = repos
 
-    # get commit id(s) TODO
+    # get venv status
+    venv = get_environment_yml()
+    info['venv'] = venv
 
-    # get venv status TODO
+    # get os information
+    import platform
+    os_info = dict(platform.uname()._asdict())
+    info['os'] = os_info
 
-    # get os information TODO
+    # get hardware information
 
-    # get hardware information TODO
+    import psutil
+    # noinspection PyProtectedMember
+    meminfo = dict(psutil.virtual_memory()._asdict())
+    info['memory'] = meminfo
 
     return info
 
-info = _get_init_info()
+track_info = _get_init_info()
