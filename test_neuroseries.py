@@ -537,6 +537,7 @@ class HDFStoreTestCase(unittest.TestCase):
     def tearDown(self):
         import os
         try:
+            self.store.close()
             os.remove('store.h5')
         except:
             pass

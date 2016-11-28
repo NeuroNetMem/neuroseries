@@ -32,7 +32,7 @@ def get_caller_test():
 
 def get_caller(back=1):
     """
-    get the main parameters of a callign function
+    get the main parameters of a calling function
     :param back: how many frames back in the stack you should go
     :return: a dict with fields 'filename', 'lineno', and 'function'
     """
@@ -117,18 +117,19 @@ kernel.execute(command)
 
 def get_notebook_name(prefix=None):
     """
-    Obtains ipython notebook path and name. This is an ugly hack, with an unfriendly user interface, but it is
+    Obtains ipython notebook path and name.
+
+    This is an ugly hack, with an unfriendly user interface, but it is
     apparently the best we can do since jupyter doesn't expose the notebook path other than via javascript from the
     browser, and that has its own limitations. In order for this to work properly, the user must:
-     1. Start the notebook server (under unix as jupyter notebook) from your home directory. If you choose not to do so
-        then you have to specify the directory from which the server was started as the prefix argument here.
-     2. reload the notebook in the browser after renaming the notebook, otherwise you will get a non-upadted name.
-     3. in a *previous cell* call save_notebook or fetch_notebook_name. The notebook name won't be available to this
-        function until the cell in which one of these two function has been called has completed execution.
+    1. Start the notebook server (under unix as jupyter notebook) from your home directory. If you choose not to do so
+    then you have to specify the directory from which the server was started as the prefix argument here.
+    2. reload the notebook in the browser after renaming the notebook, otherwise you will get a non-upadted name.
+    3. in a *previous cell* call save_notebook or fetch_notebook_name. The notebook name won't be available to this
+    function until the cell in which one of these two function has been called has completed execution.
 
     :param prefix: the directory from which the notebook server
-    :return: notebook_name: the notebook file name
-    notebook_path: the notebook path name
+    :return: notebook_name: the notebook file name notebook_path: the notebook path name
     """
     if not prefix:
         prefix = os.path.expanduser("~")

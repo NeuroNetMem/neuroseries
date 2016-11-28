@@ -17,7 +17,7 @@ neuroseries.time_series module
 
 .. automodule:: neuroseries.time_series
     :members:
-    :undoc-members:
+    :undoc-members: BaseMethod
     :show-inheritance:
 
 neuroseries.tracker module

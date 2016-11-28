@@ -10,16 +10,51 @@ use_pandas_metadata = True
 
 class BaseMethod(PandasObject):
     """
-    class for converting functions into methods.
+    Abstract class for converting functions into methods.
+
+    .. This is based on the :func:`~pandas.core.base.AccessorProperty` class.
+
+    It is mostly used here so that the same function may be applied to Tsd, TsdFrame and other classes
     """
+
     def __init__(self, data):
+        """
+        Creates an Accessor Property.
+
+        Args:
+            data: the object to be wrapped
+        """
         self._data = data
 
     @staticmethod
     def func(*args, **kwargs):
-        raise NotImplementedError('shuold have a function')
+        """
+        dummy implementation for the function that will be wrapped
+
+        Args:
+            *args: Whatever the function requires
+            **kwargs: Whatever the function requires
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: Always
+
+        """
+        raise NotImplementedError('should have a function defined here.')
 
     def __call__(self, *args, **kwargs):
+        """
+        This is the caller method for the wrapper
+        Args:
+            *args: Whatever the function requires
+            **kwargs: Whatever the function requires
+
+        Returns:
+            Whatever the function returns
+
+        """
         if len(args) == 0:
             fc = self.func(self._data, **kwargs)
         else:
@@ -31,7 +66,9 @@ class BaseMethod(PandasObject):
 
 def as_method(func):
     """
-    converts a function into a method
+    Converts a function into a method
+
+    Using the AccessorProperty mechanism, see :func:`~neuroseries.BaseMethod`
     :param func: a function
     :return: a method
     """
@@ -44,12 +81,28 @@ def as_method(func):
 
 class Range:
     """
-    a class defining a range to restrict analyses
+    A class defining a range to restrict analyses.
+
+    This is used as a context manager, taking a :func:`~neuroseries.interval_set.IntervalSet` as an input.
+    After that, all neuroseries objects will have a property r set, that will be restricted, for example:
+
+    .. code:: python
+
+        with nts.Range(range_interval):
+            np.testing.assert_array_almost_equal_nulp(self.tsd.r.times(), tsd_r.times())
     """
     interval = None
     cached_objects = []
 
     def __init__(self, a, b=None, time_units=None):
+        """
+        Creates a Range object
+        Args:
+            a: an :ref:`IntervalSet` defining the range, or the lower bound of the range
+            b : if defined (defaults to :ref:`None`), contains the upper bound of the range, as a number of a Series
+            (or other object with an Index)
+            time_units (str): a string defining the :ref:`TimeUnits` used to define the bounds.
+        """
         if b:
             start = TimeUnits.format_timestamps(np.array((a,), dtype=np.int64).ravel(), time_units)
             end = TimeUnits.format_timestamps(np.array((b,), dtype=np.int64).ravel(), time_units)
@@ -69,6 +122,21 @@ class Range:
 
 
 class TimeUnits:
+    """
+    This class deals with conversion between different time units for all neuroseries objects.
+    It also provides a context manager that tweaks the default time units to the supported units:
+    - 'us': microseconds (overall default)
+    - 'ms': milliseconds
+    - 's': seconds
+
+    The context manager is called as follows
+
+    .. code:: python
+
+        with nts.TimeUnits('ms'):
+            t = self.tsd.times()
+
+    """
     default_time_units = 'us'
 
     def __init__(self, units):
@@ -82,7 +150,17 @@ class TimeUnits:
 
     @staticmethod
     def format_timestamps(t, units=None, give_warning=True):
+        """
+        Converts numerical types to the type :func:`numpy.int64` that is used for the time index in neuroseries.
 
+        Args:
+            t: a vector (or scalar) of times
+            units: the units in which times are given
+            give_warning: if True, it will warn when the timestamps are not sored
+
+        Returns:
+            ts: times in standard neuroseries format
+        """
         if not units:
             units = TimeUnits.default_time_units
 
@@ -116,6 +194,15 @@ class TimeUnits:
 
     @staticmethod
     def return_timestamps(t, units=None):
+        """
+        package the times in the desired units
+        Args:
+            t: standard neuroseries times
+            units: the desired units for the output
+
+        Returns:
+            ts: times in the desired format
+        """
 
         if not units:
             units = TimeUnits.default_time_units
@@ -142,7 +229,22 @@ def _get_restrict_method(align):
 
 
 class Tsd(pd.Series):
+    """
+    A subclass of :func:`pandas.Series` specialized for neurophysiology time series.
+
+    Tsd provides standardized time representation, plus functions for restricting and realigning time series
+    """
     def __init__(self, t, d=None, time_units=None, **kwargs):
+        """
+        Tsd Initializer.
+
+        Args:
+            t: an object transformable in a time series, or a :func:`~pandas.Series` equivalent (if d is None)
+            d: the data in the time series
+            time_units: the time units in which times are specified (has no effect if a Pandas object
+            is provided as the first argument
+            **kwargs: arguments that will be passed to the :func:`~pandas.Series` initializer.
+        """
         if isinstance(t, (pd.Series, SingleBlockManager)):
             super().__init__(t, **kwargs)
         else:
@@ -154,17 +256,32 @@ class Tsd(pd.Series):
         self.r_cache = None
 
     def times(self, units=None):
+        """
+        The times of the Tsd, returned as np.double in the desired time units
+
+        Args:
+            units: the desired time units
+
+        Returns:
+            ts: the times vector
+
+        """
         return TimeUnits.return_timestamps(self.index.values.astype(np.float64), units)
 
     def as_series(self):
         """
-        :return: copy of the data in a DataFrame (strip Tsd class label)
+        The Tsd as a :func:`pandas:pandas.Series` object
+
+        Returns:
+            ss: the series object
+
         """
+
         return pd.Series(self, copy=True)
 
     def as_units(self, units=None):
         """
-        returns a Series with time expressed in the desired unit
+        Returns a Series with time expressed in the desired unit.
 
         :param units: us, ms, or s
         :return: Series with adjusted times
@@ -180,9 +297,29 @@ class Tsd(pd.Series):
         return ss
 
     def data(self):
+        """
+        The data in the Series object
+
+        Returns: the data
+
+        """
         return self.values
 
     def realign(self, t, align='closest'):
+        """
+        Provides a new Series only including the data points that are close to one time point in the t argument.
+
+        Args:
+            t: the aligning series, in numpy or pandas format
+            align: the values accepted by :func:`pandas.Series.reindex` plus
+            - next (similar to bfill)
+            - prev (similar to ffill)
+            - closest (similar to nearest)
+
+        Returns:
+            The realigned Tsd
+
+        """
         method = _get_restrict_method(align)
         ix = TimeUnits.format_timestamps(t.index.values)
 
@@ -190,6 +327,16 @@ class Tsd(pd.Series):
         return rest_t
 
     def restrict(self, iset, keep_labels=False):
+        """
+        Restricts the Tsd to a set of times delimited by a :func:`~neuroseries.interval_set.IntervalSet`
+
+        Args:
+            iset: the restricting interval set
+            keep_labels:
+
+        Returns:
+
+        """
         ix = iset.in_interval(self)
         tsd_r = pd.DataFrame(self, copy=True)
         col = tsd_r.columns[0]
@@ -398,8 +545,8 @@ def extract_from_HDF(storer):
         v = storer[k]
         attr = storer.get_storer(k).attrs
         if hasattr(attr, 'metadata') and \
-            'nts_class' in attr.metadata and \
-            attr.metadata['nts_class'] in extractable_classes_id:
+                        'nts_class' in attr.metadata and \
+                        attr.metadata['nts_class'] in extractable_classes_id:
             variables[k] = extractable_classes_id[attr.metadata['nts_class']](v)
 
         if hasattr(v, 'nts_class') and v.nts_class in extractable_classes_id:
