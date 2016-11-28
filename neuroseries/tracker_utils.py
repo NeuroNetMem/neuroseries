@@ -234,7 +234,7 @@ def call_conda(extra_args, abspath=True):
             unix_path = os.getenv('PATH')
             p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, env={'PYTHONPATH': '', 'PATH': unix_path})
     except OSError:
-        raise Exception("could not invoke %r\n" % extra_args)
+        raise Exception("could not invoke {}\n".format(extra_args))
     return p.communicate()
 
 
