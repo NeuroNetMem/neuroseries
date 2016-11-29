@@ -98,6 +98,23 @@ def is_repo_notebook_clean():
     return True
 
 
+def commit_notebook():
+    """
+    commit the notebook (e.g. prior to saving data)
+    Returns:
+        True if the repo is now clean
+        False otherwise
+
+    """
+    from neuroseries import track_info
+    script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(track_info['entry_point']))
+    ix = script_repo.index
+    notebook_name, _ = get_notebook_name()
+    ix.add(notebook_name)
+    ix.commit("committing " + notebook_name)
+    return not script_repo.is_dirty()
+
+
 def in_ipynb():
     """
     determines if we are running within a ipython notebook

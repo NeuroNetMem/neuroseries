@@ -17,4 +17,4 @@ class DataManagerStartupTestCase(unittest.TestCase):
         with patch('sys.argv', testargs):
             import neuroseries
             print(neuroseries.track_info)
-        self.fail('not yet implemented')
+        self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
