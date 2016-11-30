@@ -50,7 +50,8 @@ def _get_init_info():
     config_candidates.append('.neuroseries/config.yml')
 
     import os
-    config_candidates.append(os.environ['NEUROSERIES_CONFIG'])
+    if 'NEUROSERIES_CONFIG' in os.environ:
+        config_candidates.append(os.environ['NEUROSERIES_CONFIG'])
 
     import yaml
     config = {}
