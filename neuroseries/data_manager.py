@@ -59,6 +59,8 @@ def _get_init_info():
         try:
             with open(config_file) as source:
                 config = yaml.load(source)
+                print('found config file at ' + config_file)
+                break
         except FileNotFoundError:
             pass
 
