@@ -47,7 +47,7 @@ def _get_init_info():
     import os.path
     config_candidates.append(os.path.join(repos[0]['working_tree_dir'], 'neuroseries.yml'))
 
-    config_candidates.append('.neuroseries/config.yml')
+    config_candidates.append('~/.neuroseries/config.yml')
 
     import os
     if 'NEUROSERIES_CONFIG' in os.environ:
