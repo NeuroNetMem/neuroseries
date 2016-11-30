@@ -15,7 +15,10 @@ class DataManagerStartupTestCase(unittest.TestCase):
                 os.remove(f)
             except FileNotFoundError:
                 pass
-        del os.environ['NEUROSERIES_CONFIG']
+        try:
+            del os.environ['NEUROSERIES_CONFIG']
+        except KeyError:
+            pass
 
     def make_dummy_configs(self, grade):
         file_contents = ("""
@@ -56,12 +59,13 @@ grade: {}
         import os
 
         os.environ['NEUROSERIES_CONFIG'] = self.filenames[0]
+
         try:
-            os.mkdir(self.ns_dir)
+            os.mkdir(os.path.expanduser(self.ns_dir))
         except OSError:
             pass
 
-        fds = [open(fname, 'w') for fname in self.filenames[:grade]]
+        fds = [open(fname, 'w') for fname in os.path.expanduser(self.filenames[:grade])]
 
         for (fd, content) in zip(fds[:grade], file_contents):
             fd.write(content)
