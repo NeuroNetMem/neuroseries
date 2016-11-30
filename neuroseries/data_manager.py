@@ -6,15 +6,6 @@ def _get_init_info():
     # this gets all the needed information at the beginning of the run
     info = {}
 
-    # open config file, get git repos to be tracked, eventual files that need to be included in the dependencies
-    # (e.g. lookup tables, etc.)
-    # TODO
-    # config file can be 1) in the current directory, named neuroseries.yml,
-    # 2) in the 'project' directory (root of the containing git repo
-    # 3) in the home directory as .neuroseries/config.yaml
-    # 4) at the location pointed to by the variable NEUROSERIES_CONFIG
-
-    extra_repos = []
     # get name of the entry point and the arguments
     import sys
     import os.path
@@ -26,7 +17,7 @@ def _get_init_info():
         info['args'] = sys.argv[1:]
 
     # get git status, if it's a script, this should be completely committed,
-    # if it's a notebook everything should be committed TODOalmost
+    # if it's a notebook everything should be committed
     # except for the notebook itself (which may be committed at the save time)
     repos = []
 
@@ -43,6 +34,37 @@ def _get_init_info():
             Please commit your changes before running""")
 
     repos.append(script_repo_info)
+
+    # open config file, get git repos to be tracked, eventual files that need to be included in the dependencies
+    # (e.g. lookup tables, etc.)
+    # config file can be 1) in the current directory, named neuroseries.yml,
+    # 2) in the 'project' directory (root of the containing git repo
+    # 3) in the home directory as .neuroseries/config.yaml
+    # 4) at the location pointed to by the variable NEUROSERIES_CONFIG
+
+    config_candidates = ['./neuroseries.yml']
+
+    import os.path
+    config_candidates.append(os.path.join(repos[0]['working_tree_dir'], 'neuroseries.yml'))
+
+    config_candidates.append('.neuroseries/config.yml')
+
+    import os
+    config_candidates.append(os.environ['NEUROSERIES_CONFIG'])
+
+    import yaml
+    config = {}
+    for config_file in config_candidates:
+        try:
+            with open(config_file) as source:
+                config = yaml.load(source)
+        except FileNotFoundError:
+            pass
+
+    extra_repos = []
+    info['config'] = config
+    if 'extra_repos' in config:
+        extra_repos.extend(config['extra_repos'])
 
     for r in extra_repos:
         script_repo_info, is_dirty, script_repo = get_repo_info(r)
