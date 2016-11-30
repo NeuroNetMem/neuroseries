@@ -9,6 +9,9 @@ class DataManagerStartupTestCase(unittest.TestCase):
         pass
 
     def tearDown(self):
+        self.remove_files()
+
+    def remove_files(self):
         import os
         for f in self.filenames:
             try:
@@ -93,3 +96,4 @@ grade: {}
                     print(neuroseries.track_info['config'])
                     self.assertEqual(len(neuroseries.track_info['config']['list']), grade+2)
                     self.assertEqual(neuroseries.track_info['config']['grade'], grade)
+                    self.remove_files()
