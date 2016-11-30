@@ -15,7 +15,7 @@ class DataManagerStartupTestCase(unittest.TestCase):
         import os
         for f in self.filenames:
             try:
-                os.remove(f)
+                os.remove(os.path.expanduser(f))
             except FileNotFoundError:
                 pass
         try:
