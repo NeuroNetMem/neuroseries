@@ -84,7 +84,7 @@ grade: {}
             print(neuroseries.track_info['config'])
         self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
 
-    @parameterized.expand([(1, 2, 3, 4)])
+    @parameterized.expand([(1,), (2,), (3,), (4,)])
     def test_config_files(self, grade):
         from unittest.mock import patch
         import inspect
