@@ -57,7 +57,7 @@ def _get_init_info():
     config = {}
     for config_file in config_candidates:
         try:
-            with open(config_file) as source:
+            with open(os.path.expanduser(config_file)) as source:
                 config = yaml.load(source)
                 print('found config file at ' + config_file)
                 break
