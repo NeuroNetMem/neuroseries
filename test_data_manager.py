@@ -65,7 +65,7 @@ grade: {}
         except OSError:
             pass
 
-        fds = [open(fname, 'w') for fname in os.path.expanduser(self.filenames[:grade])]
+        fds = [open(os.path.expanduser(fname), 'w') for fname in self.filenames[:grade]]
 
         for (fd, content) in zip(fds[:grade], file_contents):
             fd.write(content)
