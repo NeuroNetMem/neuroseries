@@ -77,7 +77,7 @@ grade: {}
         testargs = [cur_file, 1]
         with patch('sys.argv', testargs):
             import neuroseries
-            print(neuroseries.track_info)
+            print(neuroseries.track_info['config'])
         self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
 
     def test_config_files(self):
