@@ -93,7 +93,7 @@ grade: {}
         with patch('sys.argv', testargs):
             self.make_dummy_configs(grade)
             import neuroseries
-            neuroseries.data_manager._get_init_info()
+            neuroseries.track_info = neuroseries.data_manager._get_init_info()
             self.assertEqual(len(neuroseries.track_info['config']['list']), grade+2)
             self.assertEqual(neuroseries.track_info['config']['grade'], grade)
             self.remove_files()
