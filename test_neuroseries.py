@@ -2,7 +2,13 @@ import unittest
 from nose_parameterized import parameterized
 import numpy as np
 import pandas as pd
-import neuroseries as nts
+from unittest.mock import patch
+import inspect
+cur_file = inspect.stack(0)[0][1]
+testargs = [cur_file, 1]
+print(cur_file)
+with patch('sys.argv', testargs):
+    import neuroseries as nts
 
 
 class TsTestCase(unittest.TestCase):

@@ -1,20 +1,30 @@
 from .tracker_utils import get_repo_info, in_ipynb, get_environment_yml
 
+_dont_check_git = True
+
 
 # noinspection PyProtectedMember
 def _get_init_info():
     # this gets all the needed information at the beginning of the run
     info = {}
 
+    # define a random UUID
+    from uuid import uuid4
+    info['uuid'] = uuid4()
+
+    # report the time of run start
+    from time import time
+    info['run_time'] = str(time())
+
     # get name of the entry point and the arguments
-    import sys
+    from sys import argv
     import os.path
     if in_ipynb():
         info['entry_point'] = '###notebook'
         info['args'] = []
     else:
-        info['entry_point'] = os.path.realpath(sys.argv[0])
-        info['args'] = sys.argv[1:]
+        info['entry_point'] = os.path.realpath(argv[0])
+        info['args'] = argv[1:]
 
     # get git status, if it's a script, this should be completely committed,
     # if it's a notebook everything should be committed
@@ -23,11 +33,11 @@ def _get_init_info():
 
     script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
 
-    if is_dirty and not in_ipynb():
+    if not _dont_check_git and is_dirty and not in_ipynb():
         raise RuntimeError("""Running from a dirty git repository (and not from a notebook).
         Please commit your changes before running""")
 
-    if is_dirty:
+    if not _dont_check_git and is_dirty:
         d = script_repo.index.diff(None)
         if len(d) > 1:
             raise RuntimeError("""Running from a dirty git repo (besides the current notebook).

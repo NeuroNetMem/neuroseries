@@ -84,6 +84,15 @@ grade: {}
             print(neuroseries.track_info['config'])
         self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
 
+    def test_venv(self):
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        testargs = [cur_file, 1]
+        with patch('sys.argv', testargs):
+            import neuroseries
+            self.assertTrue('pandas' in neuroseries.track_info['venv'])
+
     @parameterized.expand([(1,), (2,), (3,), (4,)])
     def test_config_files(self, grade):
         from unittest.mock import patch

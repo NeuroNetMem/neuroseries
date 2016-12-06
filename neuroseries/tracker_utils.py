@@ -61,7 +61,10 @@ def get_repo_info(dirname):
     :return: a dict with fields 'working_tree_dir': hte
     """
 
-    repo = git.Repo(dirname, search_parent_directories=True)
+    try:
+        repo = git.Repo(dirname, search_parent_directories=True)
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError("no repository at " + dirname)
     is_dirty = repo.is_dirty()
     repo_info = {'working_tree_dir': repo.working_tree_dir, 'commit': repo.head.ref.commit.hexsha,
                  'remote': repo.remotes.origin.url}
@@ -94,7 +97,6 @@ def is_repo_notebook_clean():
     if changed_file != notebook_name:
         return False
 
-    # TODO compare with notebook name
     return True
 
 
@@ -126,6 +128,7 @@ def in_ipynb():
         #     return True
         # else:
         #     return False
+        print(cfg)
         return True
     except NameError:
         return False
@@ -246,10 +249,11 @@ def call_conda(extra_args, abspath=True):
 
     try:
         if abspath:
-            p = Popen(cmd_list, stdout=PIPE, stderr=PIPE)
+            p = Popen(' '.join(cmd_list), stdout=PIPE, stderr=PIPE, shell=True)
         else:
-            unix_path = os.getenv('PATH')
-            p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, env={'PYTHONPATH': '', 'PATH': unix_path})
+            # unix_path = os.getenv('PATH')
+            # p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, env={'PYTHONPATH': '', 'PATH': unix_path})
+            p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, shell=True)
     except OSError:
         raise Exception("could not invoke {}\n".format(extra_args))
     return p.communicate()
@@ -260,7 +264,13 @@ def get_environment_yml():
     gets the current environment in a form that can be used by conda to replicate it
     :return: a string including the content of the environment.yml file
     """
+    # import os
+    # print(os.environ)
     s_out, s_err = call_conda(('env', 'export'))
+    # print(s_out)
+    # print(s_err)
+    if len(s_err) > 0:
+        raise RuntimeError("conda failed with error: " + s_err.decode())
     return s_out.decode()
 
 if __name__ == '__main__':
