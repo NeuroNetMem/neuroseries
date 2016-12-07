@@ -533,7 +533,7 @@ Tsd.store = as_method(store)
 TsdFrame.store = as_method(store)
 
 
-def extract_from_HDF(storer):
+def extract_from(storer):
     from neuroseries.interval_set import IntervalSet
     ks = storer.keys()
     extractable_classes = [Ts, Tsd, TsdFrame, IntervalSet]

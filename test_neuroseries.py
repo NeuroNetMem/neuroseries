@@ -527,7 +527,7 @@ class HDFStoreTestCase(unittest.TestCase):
             os.remove('store.h5')
         except:
             pass
-        self.store = pd.HDFStore('store.h5')
+        self.store = nts.HDFStore('store.h5')
 
         self.a1 = self.mat_data1['a1'].ravel()
         self.b1 = self.mat_data1['b1'].ravel()
@@ -565,12 +565,12 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.store.close()
 
-        with pd.HDFStore('store.h5') as store:
+        with nts.HDFStore('store.h5') as store:
             k = store.keys()
             self.assertIn('/int1', k)
             self.assertIn('/int2', k)
             self.assertIn('/tsd', k)
-            vars = nts.extract_from_HDF(store)
+            vars = nts.extract_from(store)
             self.assertIn('int1', vars)
             self.assertIn('int2', vars)
             self.assertIn('tsd', vars)
@@ -599,6 +599,6 @@ class HDFStoreTestCase(unittest.TestCase):
         self.int1.store(self.store, 'int1')
         self.tsd.store(self.store, 'tsd')
 
-        with pd.HDFStore('store.h5') as store:
-            vars = nts.extract_from_HDF(store)
+        with nts.HDFStore('store.h5') as store:
+            vars = nts.extract_from(store)
         self.assertEqual(vars['int1'].nts_class, 'IntervalSet')

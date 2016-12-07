@@ -106,3 +106,46 @@ grade: {}
             self.assertEqual(len(neuroseries.track_info['config']['list']), grade+2)
             self.assertEqual(neuroseries.track_info['config']['grade'], grade)
             self.remove_files()
+
+
+class UtilsTestCase(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+# def str_to_series(a_string):
+#     ba = bytearray(a_string, encoding='utf-8')
+#     ss = pd.Series(ba)
+#     return ss
+#
+# def series_to_series(ss):
+#     bb = bytearray(ss.values.tolist())
+#     bs = bytes(bb)
+#     a_string = bs.decode()
+#     return a_string
+    def test_convert_dict(self):
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        testargs = [cur_file, 1]
+        with patch('sys.argv', testargs):
+            import neuroseries as nts
+
+            d = {'a': 5, 'b': [1, 2, 3], 'c':
+                {'a1': 'aaa', 'c': 54}}
+
+            import json
+            import pandas as pd
+            s1 = json.dumps(d)
+            ss = nts.str_to_series(s1)
+            s2 = nts.series_to_str(ss)
+            self.assertEqual(s1, s2)
+
+            d2 = json.loads(s2)
+            self.assertEqual(d, d2)
+
+
+
+

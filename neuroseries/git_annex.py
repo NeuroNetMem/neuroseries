@@ -60,3 +60,9 @@ class AnnexRepo(object):
     def push_remote(self, remote):
         cmd_list = ['git', 'annex' 'sync', '--content', '--no-pull', remote]
         self.git.execute(cmd_list)
+
+    def lookupkey(self, filename):
+        cmd_list = ['git', 'annex' 'lookupkey', filename]
+        key = self.git.execute(cmd_list)
+        return key
+
