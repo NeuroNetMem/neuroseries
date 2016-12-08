@@ -4,7 +4,6 @@ from warnings import warn
 from pandas.core.internals import SingleBlockManager, BlockManager
 from pandas.core.base import AccessorProperty, PandasObject
 
-
 use_pandas_metadata = True
 
 
@@ -44,6 +43,7 @@ class BaseMethod(PandasObject):
         """
         raise NotImplementedError('should have a function defined here.')
 
+    # noinspection PyNoneFunctionAssignment
     def __call__(self, *args, **kwargs):
         """
         This is the caller method for the wrapper
@@ -60,6 +60,7 @@ class BaseMethod(PandasObject):
         else:
             fc = self.func(self._data, *args, **kwargs)
         return fc
+
     __doc__ = func.__doc__
     __call__.__doc__ = func.__doc__
 
@@ -234,6 +235,7 @@ class Tsd(pd.Series):
 
     Tsd provides standardized time representation, plus functions for restricting and realigning time series
     """
+
     def __init__(self, t, d=None, time_units=None, **kwargs):
         """
         Tsd Initializer.
@@ -512,6 +514,7 @@ Tsd.support = as_method(support)
 TsdFrame.support = as_method(support)
 
 
+# noinspection PyUnusedLocal
 def filter_time_series(data, columns=None):
     pass
 
@@ -523,6 +526,7 @@ def store(data, the_store, key):
         data_to_store = pd.DataFrame(data)
 
     the_store[key] = data_to_store
+    # noinspection PyProtectedMember
     metadata = {k: getattr(data, k) for k in data._metadata}
     the_store.get_storer(key).attrs.metadata = metadata
 

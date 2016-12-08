@@ -6,7 +6,8 @@ from .time_series import TimeUnits, Range, as_method, store
 
 class IntervalSet(pd.DataFrame):
     """
-    a :py:class:`pandas.DataFrame` representing a (irregular) set of time intervals in elapsed time, with relative operations
+    a :py:class:`pandas.DataFrame` representing a (irregular) set of time intervals in elapsed time,
+    with relative operations
     """
     def __init__(self, start, end=None, time_units=None, expect_fix=False, **kwargs):
         """
@@ -28,7 +29,7 @@ class IntervalSet(pd.DataFrame):
             super().__init__(df, **kwargs)
             self.r_cache = None
             self._metadata = ['nts_class']
-            self.nts_class = self.__class__.__name__  # TODO eliminate code repetition
+            self.nts_class = self.__class__.__name__
             return
 
         start = TimeUnits.format_timestamps(np.array(start, dtype=np.int64).ravel(), time_units,

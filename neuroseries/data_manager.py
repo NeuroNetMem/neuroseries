@@ -9,6 +9,11 @@ _no_git_repo = True
 
 # noinspection PyProtectedMember
 def _get_init_info():
+    """This gets all the needed information about the run at the beginning
+
+    Returns:
+        a dict about the information
+    """
     # this gets all the needed information at the beginning of the run
     info = {}
 
@@ -107,8 +112,8 @@ def _get_init_info():
 
     import psutil
     # noinspection PyProtectedMember
-    meminfo = dict(psutil.virtual_memory()._asdict())
-    info['memory'] = meminfo
+    mem_info = dict(psutil.virtual_memory()._asdict())
+    info['memory'] = mem_info
 
     return info
 
@@ -117,12 +122,30 @@ dependencies = []
 
 
 def str_to_series(a_string):
+    """Helper function to convert strings
+    This is mostly intended for json converted information, which is turned into a pandas series for storage in a
+     pd.HDFStore. Only ASCII strings are supported
+
+    Args:
+        a_string: string to be converted
+
+    Returns:
+        a pd.Series
+    """
     ba = bytearray(a_string, encoding='utf-8')
     ss = pd.Series(ba)
     return ss
 
 
 def series_to_str(ss):
+    """Helper function to convert a string encoded into a series
+
+    Args:
+        ss: a pd.Series encoded with str_to_series
+
+    Returns: the decoded string
+
+    """
     bb = bytearray(ss.values.tolist())
     bs = bytes(bb)
     a_string = bs.decode()
@@ -131,15 +154,39 @@ def series_to_str(ss):
 
 # noinspection PyClassHasNoInit
 class PandasHDFStoreWithTracking(pd.HDFStore):
+    """Enhanced pd.HDFStore including tracking information and metadata"""
     def get_info(self):
+        """get information from file
+
+        Returns: the information as a string
+
+        """
         ss = self['file_info']
         return series_to_str(ss)
 
     def put_info(self, info):
+        """
+        Store info in the file
+        Args:
+            info: an information string
+
+        Returns:
+            None
+
+        """
         ss = str_to_series(info)
         self.put('file_info', ss)
 
     def get_with_metadata(self, key):
+        """get data with metadata
+
+        Args:
+            key: the variable name
+
+        Returns:
+            data: a pd.Series object (or nd.array)
+            metadata: a dict with the metadata
+        """
         data = self[key]
         metadata = None
         attr = self.get_storer(key).attrs
@@ -149,6 +196,15 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
         return data, metadata
 
     def get(self, key):
+        """Retrieves data from a store
+        Pandas object and ndarray (via a pandas wrapper) are supported
+        Args:
+            key: the variable name
+
+        Returns:
+            data: the data
+
+        """
         data = super().get(key)
         attr = self.get_storer(key).attrs
         if hasattr(attr, 'metadata') and attr.metadata['class'] == 'ndarray':
@@ -156,6 +212,18 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
         return data
 
     def put_with_metadata(self, key, value, metadata, **kwargs):
+        """put data that needs ot be recorded with metadata
+
+        Args:
+            key: the variable name
+            value: a pandas or ndarray
+            metadata: a dict with the metadata
+            **kwargs: additional arguments to be passed to store
+
+        Returns:
+            None
+
+        """
         self.put(key, value, **kwargs)
         attr = self.get_storer(key).attrs
         if hasattr(attr, 'metadata'):
@@ -165,6 +233,16 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
         self.get_storer(key).attrs.metadata = metadata
 
     def put(self, key, value, **kwargs):
+        """Put data in the store
+        Handles pandas and ndarray types (the latter via a pandas wrapper)
+        Args:
+            key: the variable name
+            value: a pandas or ndarray object
+            **kwargs: optional arguments to be passed to pd.HDFStore
+
+        Returns:
+            None
+        """
         if isinstance(value, np.ndarray):
             if value.ndim <= 2:
                 value = pd.DataFrame(value)
@@ -199,23 +277,67 @@ default_backend = None
 
 
 class AnnexJsonBackend(object):
-    def __init__(self, dirname=None, clone_from=None, description=''):
+    def __init__(self, dir_name=None, clone_from=None, new_repo=False, description=''):
+        """Starts a new backend with git-annex support.
+        Metadata are written in json files with the same name and '.json'
+        extension. If new_repo is False, a git annex repo is searched for in:
+        1) in dir_name
+        2) in an 'annex' field of the config file
+        3) in the current directory
+        4) in current directory's parents
+        Args:
+            dir_name: The starting point for repo search
+            clone_from: a URL containing a clonable repo
+            new_repo: if True, a new repo will be created at dir_name or current directory
+            description: a description to identify the current repo
+        """
         import os
-        if dirname is None:
-            dirname = os.getcwd()
-        dirname = os.path.expanduser(dirname)
-        self.repo = AnnexRepo(dirname, clone_from=clone_from, description=description)
+        import git
+        if dir_name is None:
+            if 'annex' in track_info['config']:
+                dir_name = track_info['annex']
+            else:
+                dir_name = os.getcwd()
+        dir_name = os.path.expanduser(dir_name)
+        if not new_repo:  # then search for a git repo in parent dirs
+            repo = git.Repo(dir_name, search_parent_directories=True)
+            dir_name = repo.working_tree_dir
+        self.repo = AnnexRepo(dir_name, clone_from=clone_from, description=description)
 
     def fetch_file(self, filename):
+        """Attempts to ensure availability of file
+        File will be looked for in remotes if not locally available
+        Args:
+            filename: the filename to be searched
+
+        Returns: None
+
+        """
         self.repo.get(filename)
 
     # noinspection PyMethodMayBeStatic
     def repo_info(self):
+
+        """Get Backend-specific information
+
+        Returns: a dict with the info
+
+        """
         repo_info = {'backend': 'AnnexJsonBackend'}
         # TODO add working tree and remote
         return repo_info
 
     def save_metadata(self, filename, info):
+        """Saves file metadata in JSON file
+
+        Args:
+            filename: the filename the metadata is added for
+            info: tracking information. The file hash is added here
+
+        Returns:
+            None
+
+        """
         self.repo.add_annex(filename)
         hash_file = self.repo.lookupkey(filename)
         info['hash'] = hash_file
@@ -228,6 +350,17 @@ class AnnexJsonBackend(object):
         self.repo.add(json_file)
 
     def commit(self, filename, message_add=None):
+        """Commit the changes to git
+
+        Args:
+            filename: the file name to commit
+            message_add: an additional message after the standard
+            "Ran script.py. Added data.h5"
+
+        Returns:
+            None
+
+        """
         import sys
         message = 'Ran ' + sys.argv[0] + '. Added ' + filename + '. '
         if message_add:
@@ -236,37 +369,48 @@ class AnnexJsonBackend(object):
 
 
 class TrackingStore(object):
-    # what it has to do
-    # at construction
-    # 1) fetch data wherever they are (backend)
-    # 2) generate material store, material store should be able to handle pandas object (e.g. HDFStore)
-    # 3) if read: get the tracking info if present add it to dependencies,
-    # if not generate file fingerprint, store that as tracking info
-    # 4) if write: dump information
-    # file information is a dict {'file': filename, 'hash': an hash for the file, for example the SHA256 from git-annex,
-    # 'date-created': a date string, 'run': track_info, 'dependencies': all the dependencies,
-    # 'repo_info': information useful for the backend to retrieve the file
-    # 'variables': a dict of variable names and info (as for example given by
-    # information is serialized as json and stored in the material store (backend)
-    # information also stored in json (text) metafile. before the file is closed,
-    # the hash will be the placeholder 'NULL'.
-    # it will be replaced in the metafile by the hash at closure
+    """A Store, encapsulating a file, that will keep track of code that has been run and its dependencies.
+    What it does
+    at construction
+    1) fetch data wherever they are (backend)
+    2) generate material store, material store should be able to handle pandas object (e.g. HDFStore)
+    3) if read: get the tracking info if present add it to dependencies,
+    if not generate file fingerprint, store that as tracking info
+    4) if write: dump information
+    file information is a dict {'file': filename, 'hash': an hash for the file, for example the SHA256 from git-annex,
+    'date-created': a date string, 'run': track_info, 'dependencies': all the dependencies,
+    'repo_info': information useful for the backend to retrieve the file
+    'variables': a dict of variable names and info (as for example given by
+    information is serialized as json and stored in the material store (backend)
+    information also stored in json (text) metafile. before the file is closed,
+    the hash will be the placeholder 'NULL'.
+    it will be replaced in the metafile by the hash at closure
 
-    # material store must
-    # handle pandas objects, with metadata. Must be able to store (ASCII) info string
-    # must be able to write and read with or without metadata (for pandas)
-    # it can only do write and read, no append (enforced in this class)
+    material store must
+    handle pandas objects, with metadata. Must be able to store (ASCII) info string
+    must be able to write and read with or without metadata (for pandas)
+    it can only do write and read, no append (enforced in this class)
 
-    # backend must
-    # fetch file (ensure availability)
-    # provide hash
-    # handle metafile info (or other mechanism). metafile info
-    # commit file and metafiles (for example, at closure)
-    # for git-annex that would mean: data files in the annex, metafiles in the git repo #TODO
+    backend must
+    fetch file (ensure availability)
+    provide hash
+    handle metafile info (or other mechanism). metafile info
+    commit file and metafile (for example, at closure)
+    for git-annex that would mean: data files in the annex, metafiles in the git repo #TODO
 
-    # backend is defined once per run and remains a property of run TODO
+    backend is defined once per run and remains a property of run TODO
+    """
 
-    def __init__(self, filename, mode='r', backend=None, store_type=PandasHDFStoreWithTracking):  # TODO change backend
+    def __init__(self, filename, mode='r', backend=None, store_type=PandasHDFStoreWithTracking, **kwargs):
+        """Initialize the Store
+
+        Args:
+            filename: The filename
+            mode: can be 'r' (read) or 'w' (write)
+            backend: the backend for file handling
+            store_type: the class to be used for material store
+            **kwargs: optional arguments, will be passed to the material store
+        """
         if mode not in ['r', 'w']:
             raise ValueError('mode must be "w" or "r"')
         self.mode = mode
@@ -275,8 +419,10 @@ class TrackingStore(object):
             self.backend = backend
         else:
             self.backend = default_backend
-        self.backend.fetch_file(filename)
-        self.store = store_type(filename, mode)
+        if mode == 'r':
+            self.backend.fetch_file(filename)
+
+        self.store = store_type(filename, mode, **kwargs)
 
         if mode == 'r':
             self.info = json.loads(self.store.get_info())
@@ -290,39 +436,101 @@ class TrackingStore(object):
             self.store.put_info(json.dumps(self.info))
 
     def close(self):
+        """Close the store
+        Does housekeeping with the tracking information and backend
+        Returns:
+            None
+        """
         self.store.put_info(json.dumps(self.info))
         self.store.close()
         self.backend.save_metadata(self.filename, self.info)
         self.backend.commit(self.filename)
 
     def get(self, key):
+        """Gets data from store
+
+        Args:
+            key: the variable name
+
+        Returns:
+            the data
+        """
         if self.mode == 'w':
             raise IOError("store is open in write mode")
         return self.store.get(key)
 
     def has_metadata(self, key):
+        """checks if stored data has accompanying metadata
+
+        Args:
+            key: the variable name
+
+        Returns:
+            bool
+        """
         if self.mode == 'w':
             raise IOError("store is open in write mode")
         (_, metadata) = self.store.get_with_metadata(key)
         return metadata is not None
 
     def get_with_metadata(self, key):
+        """Get data with metadata
+
+        Args:
+            key: the variable name
+
+        Returns:
+            data: the data
+            metadata: dict with metadata
+
+        """
         if self.mode == 'w':
             raise IOError("store is open in write mode")
         return self.store.get_with_metadata(key)
 
     def keys(self):
+        """lists the variables stored
+
+        Returns:
+            list of variable names
+
+        """
         return self.store.keys()
 
     def put(self, key, value, metadata=None, **kwargs):
+        """Put data in store
+
+        Args:
+            key: the variable name
+            value: data
+            metadata: dict with metadata
+            **kwargs: optional arguments to be passed to material store
+
+        Returns:
+            None
+
+        """
         if self.mode == 'r':
             raise IOError('store is open in read mode')
         self.info['variables'][key] = self.get_variable_info(key, value)
 
         self.store.put_with_metadata(key, value, metadata, **kwargs)
 
-    def append(self, key, value, **keyargs):
-        pass
+    def append(self, key, value, **kwargs):
+        """Appends data to existing variable (if store allows it)
+
+        Args:
+            key: the variable name
+            value: data to append
+            **kwargs: optional arguments for the material store
+
+        Returns:
+
+        """
+        if self.mode == 'r':
+            raise IOError('store is open in read mode')
+        self.info['variables'][key] = self.get_variable_info(key, value)
+        self.store.append(key, value, **kwargs)
 
     def get_variable_info(self, key, var):
         info = "Object of class: " + type(var).__name__ + '\n'

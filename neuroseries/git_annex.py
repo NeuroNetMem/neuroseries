@@ -65,4 +65,3 @@ class AnnexRepo(object):
         cmd_list = ['git', 'annex' 'lookupkey', filename]
         key = self.git.execute(cmd_list)
         return key
-

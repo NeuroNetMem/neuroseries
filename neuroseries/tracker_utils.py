@@ -54,17 +54,17 @@ def get_entry_point():
     return entry
 
 
-def get_repo_info(dirname):
+def get_repo_info(dir_name):
     """
     find the repository that contains the given directory
-    :param dirname: directory to be examined
+    :param dir_name: directory to be examined
     :return: a dict with fields 'working_tree_dir': hte
     """
 
     try:
-        repo = git.Repo(dirname, search_parent_directories=True)
+        repo = git.Repo(dir_name, search_parent_directories=True)
     except git.exc.InvalidGitRepositoryError:
-        raise ValueError("no repository at " + dirname)
+        raise ValueError("no repository at " + dir_name)
     is_dirty = repo.is_dirty()
     repo_info = {'working_tree_dir': repo.working_tree_dir, 'commit': repo.head.ref.commit.hexsha,
                  'remote': repo.remotes.origin.url}
@@ -137,7 +137,7 @@ def in_ipynb():
 def run_magic(magic_string="timeit abs(-42)"):
     """
     runs a ipython magic command
-    :param magic_string: the magic commmand
+    :param magic_string: the magic command
     :return: None
     """
     from IPython import get_ipython
@@ -175,7 +175,7 @@ def get_notebook_name(prefix=None):
     browser, and that has its own limitations. In order for this to work properly, the user must:
     1. Start the notebook server (under unix as jupyter notebook) from your home directory. If you choose not to do so
     then you have to specify the directory from which the server was started as the prefix argument here.
-    2. reload the notebook in the browser after renaming the notebook, otherwise you will get a non-upadted name.
+    2. reload the notebook in the browser after renaming the notebook, otherwise you will get a non-updated name.
     3. in a *previous cell* call save_notebook or fetch_notebook_name. The notebook name won't be available to this
     function until the cell in which one of these two function has been called has completed execution.
 
