@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from unittest.mock import patch
 import inspect
+
 cur_file = inspect.stack(0)[0][1]
 testargs = [cur_file, 1]
 print(cur_file)
@@ -527,7 +528,8 @@ class HDFStoreTestCase(unittest.TestCase):
             os.remove('store.h5')
         except:
             pass
-        self.store = nts.HDFStore('store.h5')
+        backend = nts.FilesBackend()
+        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
 
         self.a1 = self.mat_data1['a1'].ravel()
         self.b1 = self.mat_data1['b1'].ravel()
@@ -539,6 +541,8 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.tsd_t = self.mat_data1['t'].ravel()
         self.tsd_d = self.mat_data1['d'].ravel()
+
+        self.store.close()
 
     def tearDown(self):
         import os
@@ -559,13 +563,14 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.tsd = data_class(self.tsd_t, self.tsd_d)
 
+        self.store = nts.HDFStore('store.h5', backend=nts.FilesBackend(), mode='w')
         self.int1.store(self.store, 'int1')
         self.int2.store(self.store, 'int2')
         self.tsd.store(self.store, 'tsd')
 
         self.store.close()
 
-        with nts.HDFStore('store.h5') as store:
+        with nts.HDFStore('store.h5', backend=nts.FilesBackend()) as store:
             k = store.keys()
             self.assertIn('/int1', k)
             self.assertIn('/int2', k)
@@ -596,9 +601,12 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.tsd = data_class(self.tsd_t, self.tsd_d)
 
+        self.store = nts.HDFStore('store.h5', backend=nts.FilesBackend(), mode='w')
         self.int1.store(self.store, 'int1')
         self.tsd.store(self.store, 'tsd')
+        self.store.close()
 
-        with nts.HDFStore('store.h5') as store:
+        with nts.HDFStore('store.h5', backend=nts.FilesBackend()) as store:
             vars = nts.extract_from(store)
         self.assertEqual(vars['int1'].nts_class, 'IntervalSet')
+        self.assertIsInstance(vars['int1'], nts.IntervalSet)

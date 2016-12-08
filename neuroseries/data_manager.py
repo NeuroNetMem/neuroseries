@@ -121,6 +121,13 @@ track_info = _get_init_info()
 dependencies = []
 
 
+def get_dependencies():
+    return dependencies
+
+def reset_dependencies():
+    global dependencies
+    dependencies = []
+
 def str_to_series(a_string):
     """Helper function to convert strings
     This is mostly intended for json converted information, which is turned into a pandas series for storage in a
@@ -207,7 +214,8 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
         """
         data = super().get(key)
         attr = self.get_storer(key).attrs
-        if hasattr(attr, 'metadata') and attr.metadata['class'] == 'ndarray':
+        if attr is not None and hasattr(attr, 'metadata') and attr.metadata is not None and \
+                        'class' in attr.metadata and attr.metadata['class'] == 'ndarray':
             data = data.values
         return data
 
@@ -269,11 +277,11 @@ class FilesBackend(object):
     def save_metadata(self, filename, info):
         pass
 
-    def commit_file(self, filename):
+    def commit(self, filename, message_add=None):
         pass
 
 
-default_backend = None
+default_backend = FilesBackend()
 
 
 class AnnexJsonBackend(object):
@@ -368,6 +376,17 @@ class AnnexJsonBackend(object):
         self.repo.commit(message)
 
 
+def capture_info(item):
+    import io
+    from contextlib import redirect_stdout
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        item.info()
+    out = f.getvalue()
+    return out
+
+
 class TrackingStore(object):
     """A Store, encapsulating a file, that will keep track of code that has been run and its dependencies.
     What it does
@@ -411,6 +430,7 @@ class TrackingStore(object):
             store_type: the class to be used for material store
             **kwargs: optional arguments, will be passed to the material store
         """
+        global dependencies
         if mode not in ['r', 'w']:
             raise ValueError('mode must be "w" or "r"')
         self.mode = mode
@@ -434,6 +454,7 @@ class TrackingStore(object):
                          'dependencies': dependencies, 'file': filename, 'hash': 'NULL', 'repo_info': repo_info,
                          'variables': {}}
             self.store.put_info(json.dumps(self.info))
+        print(dependencies)
 
     def close(self):
         """Close the store
@@ -441,10 +462,18 @@ class TrackingStore(object):
         Returns:
             None
         """
-        self.store.put_info(json.dumps(self.info))
+        if self.mode == 'w':
+            self.info['run'] = track_info
+            self.store.put_info(json.dumps(self.info))
         self.store.close()
         self.backend.save_metadata(self.filename, self.info)
         self.backend.commit(self.filename)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def get(self, key):
         """Gets data from store
@@ -516,6 +545,12 @@ class TrackingStore(object):
 
         self.store.put_with_metadata(key, value, metadata, **kwargs)
 
+    def __setitem__(self, key, value):
+        self.put(key, value)
+
+    def __getitem__(self, item):
+        return self.get(item)
+
     def append(self, key, value, **kwargs):
         """Appends data to existing variable (if store allows it)
 
@@ -535,12 +570,14 @@ class TrackingStore(object):
     def get_variable_info(self, key, var):
         info = "Object of class: " + type(var).__name__ + '\n'
         try:
-            i = self.store[key].info()
-            info += i
-        except AttributeError:
-            try:
-                i = var.info()
+            i = capture_info(self.store[key])
+            if i:
                 info += i
+        except (AttributeError, KeyError):
+            try:
+                i = capture_info(var)
+                if i:
+                    info += i
             except AttributeError:
                 try:
                     s = str(var.shape)

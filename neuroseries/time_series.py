@@ -519,7 +519,7 @@ def filter_time_series(data, columns=None):
     pass
 
 
-def store(data, the_store, key):
+def store(data, the_store, key, **kwargs):
     if isinstance(data, Tsd):
         data_to_store = data.as_series()
     else:
@@ -528,7 +528,7 @@ def store(data, the_store, key):
     the_store[key] = data_to_store
     # noinspection PyProtectedMember
     metadata = {k: getattr(data, k) for k in data._metadata}
-    the_store.get_storer(key).attrs.metadata = metadata
+    the_store.put(key, data_to_store, metadata, **kwargs)
 
 
 # noinspection PyTypeChecker
@@ -546,12 +546,11 @@ def extract_from(storer):
     variables = {}
     for k in ks:
         k = k[1:]
-        v = storer[k]
-        attr = storer.get_storer(k).attrs
-        if hasattr(attr, 'metadata') and \
-                        'nts_class' in attr.metadata and \
-                        attr.metadata['nts_class'] in extractable_classes_id:
-            variables[k] = extractable_classes_id[attr.metadata['nts_class']](v)
+        (v, metadata) = storer.get_with_metadata(k)
+        if metadata is not None and \
+                        'nts_class' in metadata and \
+                        metadata['nts_class'] in extractable_classes_id:
+            variables[k] = extractable_classes_id[metadata['nts_class']](v)
 
         if hasattr(v, 'nts_class') and v.nts_class in extractable_classes_id:
             variables[k] = extractable_classes_id[v.nts_class](v)
