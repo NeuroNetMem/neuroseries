@@ -1,6 +1,6 @@
 import unittest
 # from nose_parameterized import parameterized
-# import numpy as np
+import numpy as np
 # import pandas as pd
 # from unittest.mock import patch
 # import inspect
@@ -102,9 +102,22 @@ class TrackerInitTestCase(unittest.TestCase):
         self.tsd.store(self.store, 'tsd')
         self.store.close()
 
+        backend = nts.FilesBackend()
         self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
         self.assertTrue(len(nts.dependencies) > 0)
         self.assertEqual(nts.dependencies[0]['file'], 'store.h5')
         d = json.loads(nts.series_to_str(self.store2['file_info']))
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
         self.store2.close()
+
+    def testStoreArray(self):
+        backend = nts.FilesBackend()
+        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
+        arr = np.arange(100)
+        self.store['arr'] = arr
+        self.store.close()
+
+        backend = nts.FilesBackend()
+        self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
+        arr2 = self.store2['arr']
+        np.testing.assert_array_almost_equal_nulp(arr, arr2)

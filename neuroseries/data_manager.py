@@ -124,9 +124,11 @@ dependencies = []
 def get_dependencies():
     return dependencies
 
+
 def reset_dependencies():
     global dependencies
     dependencies = []
+
 
 def str_to_series(a_string):
     """Helper function to convert strings
@@ -212,11 +214,14 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
             data: the data
 
         """
+        import ast
         data = super().get(key)
         attr = self.get_storer(key).attrs
         if attr is not None and hasattr(attr, 'metadata') and attr.metadata is not None and \
                         'class' in attr.metadata and attr.metadata['class'] == 'ndarray':
             data = data.values
+            data_shape = ast.literal_eval(attr.metadata['shape'])
+            data = data.reshape(data_shape)
         return data
 
     def put_with_metadata(self, key, value, metadata, **kwargs):
@@ -234,6 +239,9 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
         """
         self.put(key, value, **kwargs)
         attr = self.get_storer(key).attrs
+
+        if metadata is None:
+            metadata = {}
         if hasattr(attr, 'metadata'):
             ex_metadata = attr.metadata
             metadata.update(ex_metadata)
@@ -252,12 +260,13 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
             None
         """
         if isinstance(value, np.ndarray):
+            shape_str = str(value.shape)
             if value.ndim <= 2:
                 value = pd.DataFrame(value)
             else:
                 value = pd.Panel(value)
             super().put(key, value, **kwargs)
-            metadata = {'class': 'ndarray'}
+            metadata = {'class': 'ndarray', 'shape': shape_str}
             self.get_storer(key).attrs.metadata = metadata
         else:
             super().put(key, value, **kwargs)
