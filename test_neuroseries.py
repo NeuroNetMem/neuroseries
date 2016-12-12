@@ -6,9 +6,9 @@ from unittest.mock import patch
 import inspect
 
 cur_file = inspect.stack(0)[0][1]
-testargs = [cur_file, 1]
+test_args = [cur_file, 1]
 print(cur_file)
-with patch('sys.argv', testargs):
+with patch('sys.argv', test_args):
     import neuroseries as nts
 
 
@@ -81,10 +81,11 @@ class TsTestCase(unittest.TestCase):
 
     def test_create_ts_wrong_units(self):
         """
-        if the units are unspported it should raise ValueError
+        if the units are unsupported it should raise ValueError
         """
         a = np.random.randint(0, 10000000, 100)
         a.sort()
+        # noinspection PyUnusedLocal
         ts = 1
         with self.assertRaises(ValueError):
             ts = nts.Ts(a, time_units='min')
@@ -182,6 +183,7 @@ class TsRestrictTestCase(unittest.TestCase):
         d_a = d_a.reshape((len(d_a),))
         t_a = data_class(self.mat_data1['t_a'].astype(np.int64), d_a)
         t_b = nts.Ts(self.mat_data1['t_b'].astype(np.int64))
+        # noinspection PyUnusedLocal
         t_closest = 1
         with self.assertRaises(ValueError):
             t_closest = t_a.realign(t_b, align='banana')
@@ -383,9 +385,9 @@ class TsdUnitsTestCase(unittest.TestCase):
         (nts.Tsd,),
         (nts.TsdFrame,)
     ])
-    def test_asunits_ts(self, data_class):
+    def test_as_units_ts(self, data_class):
         """
-        astype returns tsd dataframe
+        as_units returns tsd dataframe
         :return:
         """
         self.tsd = data_class(self.tsd_t, self.tsd_d)
@@ -575,20 +577,20 @@ class HDFStoreTestCase(unittest.TestCase):
             self.assertIn('/int1', k)
             self.assertIn('/int2', k)
             self.assertIn('/tsd', k)
-            vars = nts.extract_from(store)
-            self.assertIn('int1', vars)
-            self.assertIn('int2', vars)
-            self.assertIn('tsd', vars)
-            self.assertIsInstance(vars['int1'], nts.IntervalSet)
-            self.assertIsInstance(vars['tsd'], data_class)
-            np.testing.assert_array_almost_equal_nulp(self.int1['start'], vars['int1']['start'])
-            np.testing.assert_array_almost_equal_nulp(self.int1['end'], vars['int1']['end'])
-            np.testing.assert_array_almost_equal_nulp(self.int2['start'], vars['int2']['start'])
-            np.testing.assert_array_almost_equal_nulp(self.int2['end'], vars['int2']['end'])
+            all_vars = nts.extract_from(store)
+            self.assertIn('int1', all_vars)
+            self.assertIn('int2', all_vars)
+            self.assertIn('tsd', all_vars)
+            self.assertIsInstance(all_vars['int1'], nts.IntervalSet)
+            self.assertIsInstance(all_vars['tsd'], data_class)
+            np.testing.assert_array_almost_equal_nulp(self.int1['start'], all_vars['int1']['start'])
+            np.testing.assert_array_almost_equal_nulp(self.int1['end'], all_vars['int1']['end'])
+            np.testing.assert_array_almost_equal_nulp(self.int2['start'], all_vars['int2']['start'])
+            np.testing.assert_array_almost_equal_nulp(self.int2['end'], all_vars['int2']['end'])
             np.testing.assert_array_almost_equal_nulp(self.tsd.index.values,
-                                                      vars['tsd'].index.values)
+                                                      all_vars['tsd'].index.values)
             np.testing.assert_array_almost_equal_nulp(self.tsd.values,
-                                                      vars['tsd'].values)
+                                                      all_vars['tsd'].values)
 
     @parameterized.expand([
         (nts.Tsd,),
@@ -607,6 +609,6 @@ class HDFStoreTestCase(unittest.TestCase):
         self.store.close()
 
         with nts.HDFStore('store.h5', backend=nts.FilesBackend()) as store:
-            vars = nts.extract_from(store)
-        self.assertEqual(vars['int1'].nts_class, 'IntervalSet')
-        self.assertIsInstance(vars['int1'], nts.IntervalSet)
+            all_vars = nts.extract_from(store)
+        self.assertEqual(all_vars['int1'].nts_class, 'IntervalSet')
+        self.assertIsInstance(all_vars['int1'], nts.IntervalSet)

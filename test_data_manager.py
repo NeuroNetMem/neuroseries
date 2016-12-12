@@ -78,8 +78,8 @@ grade: {}
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
-        testargs = [cur_file, 1]
-        with patch('sys.argv', testargs):
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
             import neuroseries
             print(neuroseries.track_info['config'])
         self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
@@ -88,8 +88,8 @@ grade: {}
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
-        testargs = [cur_file, 1]
-        with patch('sys.argv', testargs):
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
             import neuroseries
             self.assertTrue('pandas' in neuroseries.track_info['venv'])
 
@@ -98,12 +98,12 @@ grade: {}
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
-        testargs = [cur_file, 1]
-        with patch('sys.argv', testargs):
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
             self.make_dummy_configs(grade)
             import neuroseries
             neuroseries.track_info = neuroseries.data_manager._get_init_info()
-            self.assertEqual(len(neuroseries.track_info['config']['list']), grade+2)
+            self.assertEqual(len(neuroseries.track_info['config']['list']), grade + 2)
             self.assertEqual(neuroseries.track_info['config']['grade'], grade)
             self.remove_files()
 
@@ -115,29 +115,28 @@ class UtilsTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-# def str_to_series(a_string):
-#     ba = bytearray(a_string, encoding='utf-8')
-#     ss = pd.Series(ba)
-#     return ss
-#
-# def series_to_series(ss):
-#     bb = bytearray(ss.values.tolist())
-#     bs = bytes(bb)
-#     a_string = bs.decode()
-#     return a_string
+    # def str_to_series(a_string):
+    #     ba = bytearray(a_string, encoding='utf-8')
+    #     ss = pd.Series(ba)
+    #     return ss
+    #
+    # def series_to_series(ss):
+    #     bb = bytearray(ss.values.tolist())
+    #     bs = bytes(bb)
+    #     a_string = bs.decode()
+    #     return a_string
     def test_convert_dict(self):
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
-        testargs = [cur_file, 1]
-        with patch('sys.argv', testargs):
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
             import neuroseries as nts
 
             d = {'a': 5, 'b': [1, 2, 3], 'c':
-                {'a1': 'aaa', 'c': 54}}
+                 {'a1': 'aaa', 'c': 54}}
 
             import json
-            import pandas as pd
             s1 = json.dumps(d)
             ss = nts.str_to_series(s1)
             s2 = nts.series_to_str(ss)
@@ -145,7 +144,3 @@ class UtilsTestCase(unittest.TestCase):
 
             d2 = json.loads(s2)
             self.assertEqual(d, d2)
-
-
-
-

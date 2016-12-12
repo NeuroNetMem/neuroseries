@@ -4,6 +4,7 @@ from warnings import warn
 from .time_series import TimeUnits, Range, as_method, store
 
 
+# noinspection PyAbstractClass
 class IntervalSet(pd.DataFrame):
     """
     a :py:class:`pandas.DataFrame` representing a (irregular) set of time intervals in elapsed time,

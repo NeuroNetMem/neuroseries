@@ -10,6 +10,7 @@ import numpy as np
 
 class TrackerInitTestCase(unittest.TestCase):
     def setUp(self):
+        # noinspection PyGlobalUndefined
         global nts
         import neuroseries as nts
         from scipy.io import loadmat
@@ -48,16 +49,17 @@ class TrackerInitTestCase(unittest.TestCase):
         except:
             pass
 
+        # noinspection PyBroadException
         try:
             self.store2.close()
         except:
             pass
 
+        # noinspection PyBroadException
         try:
             os.remove('store.h5')
         except:
             pass
-
 
     def testTrackerInfo(self):
         import json
@@ -66,6 +68,7 @@ class TrackerInitTestCase(unittest.TestCase):
         # self.assertEqual(nts.data_manager.dependencies, [])
         # self.assertEqual(nts.dependencies, [])
         import os
+        # noinspection PyBroadException
         try:
             os.remove('store.h5')
         except:
@@ -91,7 +94,6 @@ class TrackerInitTestCase(unittest.TestCase):
         self.store = nts.HDFStore('store.h5', backend=backend, mode='r')
         d = json.loads(nts.series_to_str(self.store['file_info']))
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
-
 
     def testOpenCloseFile(self):
         import json
