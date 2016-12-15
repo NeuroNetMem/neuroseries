@@ -65,7 +65,7 @@ def get_repo_info(dir_name):
         repo = git.Repo(dir_name, search_parent_directories=True)
     except git.exc.InvalidGitRepositoryError:
         raise ValueError("no repository at " + dir_name)
-    is_dirty = repo.is_dirty()
+    is_dirty = repo.is_dirty(untracked_files=True)
     repo_info = {'working_tree_dir': repo.working_tree_dir, 'commit': repo.head.ref.commit.hexsha,
                  'remote': repo.remotes.origin.url}
     return repo_info, is_dirty, repo

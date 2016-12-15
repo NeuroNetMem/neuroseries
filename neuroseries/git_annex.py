@@ -40,7 +40,9 @@ class AnnexRepo(object):
 
     def add_remote(self, name, remote_url):
         self.remotes[name] = self.repo.create_remote(name, remote_url)
-
+        origin = self.remotes[name]
+        origin.fetch()
+        self.repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master).checkout()
     # def add_special_remote(self, name, remote_url, remote_type='rsync', auto_enable=True, **kwargs):
     #     special_types = {'rsync': self.add_special_remote_rsync}
     #     try:
@@ -50,21 +52,33 @@ class AnnexRepo(object):
     #                                   + str(special_types.keys()))
 
     # noinspection PyUnusedLocal
-    def add_special_remote_rsync(self, name, remote_url, auto_enable, **kwargs):
+
+    def pull(self, remote_name):
+        self.remotes[remote_name].pull()
+
+    def push(self, remote_name):
+        self.remotes[remote_name].push()
+
+    def add_special_remote_rsync(self, name, remote_url, auto_enable=True, **kwargs):
         cmd_list = ['git', 'annex', 'initremote', name, 'type=rsync', 'rsyncurl=' + remote_url, 'encryption=none']
         if auto_enable:
             cmd_list.append('autoenable=true')
         self.git.execute(cmd_list)
+        self.remotes[name] = self.repo.remotes[name]
 
     def get(self, file):
         cmd_list = ['git', 'annex', 'get', file]
         self.git.execute(cmd_list)
 
-    def push_remote(self, remote):
-        cmd_list = ['git', 'annex' 'sync', '--content', '--no-pull', remote]
+    def drop(self, file):
+        cmd_list = ['git', 'annex', 'drop', file]
+        self.git.execute(cmd_list)
+
+    def push_annex(self, remote_name):
+        cmd_list = ['git', 'annex', 'sync', '--content', '--no-pull', self.remotes[remote_name].name]
         self.git.execute(cmd_list)
 
     def lookupkey(self, filename):
-        cmd_list = ['git', 'annex' 'lookupkey', filename]
+        cmd_list = ['git', 'annex', 'lookupkey', filename]
         key = self.git.execute(cmd_list)
         return key
