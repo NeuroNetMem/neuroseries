@@ -7,7 +7,10 @@ class MyProgressPrinter(git.RemoteProgress):
 
 
 class AnnexRepo(object):
-    def __init__(self, path, clone_from=None, description=''):
+    def __init__(self, path=None, clone_from=None, description=''):
+        if path is None:
+            import os
+            path = os.getcwd()
         self.working_tree = path
         if clone_from:
             self.repo = git.Repo.clone_from(clone_from, to_path=path, progress=MyProgressPrinter)
@@ -38,13 +41,13 @@ class AnnexRepo(object):
     def add_remote(self, name, remote_url):
         self.remotes[name] = self.repo.create_remote(name, remote_url)
 
-    def add_special_remote(self, name, remote_url, remote_type='rsync', auto_enable=True, **kwargs):
-        special_types = {'rsync': self.add_special_remote_rsync}
-        try:
-            special_types[remote_type](name, remote_url, auto_enable, **kwargs)
-        except KeyError:
-            raise NotImplementedError("remote type not implemented. Types implemented are: "
-                                      + str(special_types.keys()))
+    # def add_special_remote(self, name, remote_url, remote_type='rsync', auto_enable=True, **kwargs):
+    #     special_types = {'rsync': self.add_special_remote_rsync}
+    #     try:
+    #         special_types[remote_type](name, remote_url, auto_enable, **kwargs)
+    #     except KeyError:
+    #         raise NotImplementedError("remote type not implemented. Types implemented are: "
+    #                                   + str(special_types.keys()))
 
     # noinspection PyUnusedLocal
     def add_special_remote_rsync(self, name, remote_url, auto_enable, **kwargs):
