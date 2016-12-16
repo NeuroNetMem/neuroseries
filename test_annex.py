@@ -264,7 +264,6 @@ class AnnexRemoteTestCase(unittest.TestCase):
         self.assertTrue(url, '../repo2')
 
 
-
     def test_pull(self):
         # test that data can be pulled to normal remote
         import os

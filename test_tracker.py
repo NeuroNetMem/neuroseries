@@ -1,11 +1,29 @@
 import unittest
-# from nose_parameterized import parameterized
+from nose_parameterized import parameterized
 import numpy as np
+import pexpect as pex
+from test_annex import prepare_sandbox, change_mod, make_random_text
 # import pandas as pd
 # from unittest.mock import patch
 # import inspect
 
-# import neuroseries as nts
+# noinspection PyUnresolvedReferences
+import neuroseries as nts
+
+
+def create_remote_repo(name):
+    import os
+    os.mkdir(name)
+    os.chdir(name)
+    pex.run('git init')
+    pex.run('git annex init')
+    f = open('file1.txt', 'w')
+    content = make_random_text(1000)
+    f.write(content)
+    f.close()
+    pex.run('git annex add file1.txt')
+    pex.run('git commit -m "commit file1.txt"')
+    pex.run('git remote add laptop ../repo1')
 
 
 class TrackerInitTestCase(unittest.TestCase):
@@ -38,6 +56,15 @@ class TrackerInitTestCase(unittest.TestCase):
         self.tsd_d = self.mat_data1['d'].ravel()
         self.tsd = nts.Tsd(self.tsd_t, self.tsd_d)
 
+        self.start_dir = os.getcwd()
+        prepare_sandbox()
+        os.chdir('scratch/sandbox')
+
+        os.mkdir('repo1')
+        os.chdir('repo1')
+        pex.run('git init')
+        pex.run('git annex init')
+
     def tearDown(self):
         import sys
         del sys.modules[nts.__name__]
@@ -61,9 +88,21 @@ class TrackerInitTestCase(unittest.TestCase):
         except:
             pass
 
-    def testTrackerInfo(self):
+        import os
+        import shutil
+        print(self.start_dir)
+        os.chdir(self.start_dir)
+        # noinspection PyBroadException
+        try:
+            change_mod('scratch/sandbox')
+            shutil.rmtree('scratch/sandbox')
+        except:
+            pass
+
+    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    def testTrackerInfo(self, backend_class):
         import json
-        backend = nts.FilesBackend()
+        backend = backend_class()
         # nts.reset_dependencies()
         # self.assertEqual(nts.data_manager.dependencies, [])
         # self.assertEqual(nts.dependencies, [])
@@ -95,9 +134,9 @@ class TrackerInitTestCase(unittest.TestCase):
         d = json.loads(nts.series_to_str(self.store['file_info']))
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
 
-    def testOpenCloseFile(self):
-        import json
-        backend = nts.FilesBackend()
+    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    def testOpenCloseFile(self, backend_type):
+        backend = backend_type()
         self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
         self.int1.store(self.store, 'int1')
         self.int2.store(self.store, 'int2')
@@ -108,18 +147,28 @@ class TrackerInitTestCase(unittest.TestCase):
         self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
         self.assertTrue(len(nts.dependencies) > 0)
         self.assertEqual(nts.dependencies[0]['file'], 'store.h5')
-        d = json.loads(nts.series_to_str(self.store2['file_info']))
+        d = self.store2.get_file_info()
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
         self.store2.close()
 
-    def testStoreArray(self):
-        backend = nts.FilesBackend()
+    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    def testStoreArray(self, backend_type):
+        backend = backend_type()
+
+        if backend_type == nts.AnnexJsonBackend:
+            import os
+            os.chdir('..')
+            create_remote_repo('repo2')
+            os.chdir('../repo1')
         self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
         arr = np.arange(100)
         self.store['arr'] = arr
         self.store.close()
 
-        backend = nts.FilesBackend()
+        if backend_type == nts.AnnexJsonBackend:
+            backend.push()
+            backend.drop('store.h5')
+        backend = backend_type()
         self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
         arr2 = self.store2['arr']
         np.testing.assert_array_almost_equal_nulp(arr, arr2)

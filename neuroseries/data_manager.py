@@ -285,6 +285,10 @@ class FilesBackend(object):
     def commit(self, filename, message_add=None):
         pass
 
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def get_file_info(self, filename):
+        return None
+
 
 default_backend = FilesBackend()
 
@@ -315,8 +319,19 @@ class JsonBackend(FilesBackend):
         with open(json_file, 'w') as f:
             f.write(json.dumps(info))
 
+    def get_file_info(self, filename):
+        import os
+        root, _ = os.path.splitext(filename)
+        json_file = root + '.json'
+        if os.path.exists(json_file):
+            with open(json_file, 'r') as f:
+                js_string = f.read()
+            return json.loads(js_string)
+        else:
+            return None
 
-class AnnexJsonBackend(FilesBackend):
+
+class AnnexJsonBackend(JsonBackend):
     def __init__(self, dir_name=None, clone_from=None, new_repo=False, description=''):
         """Starts a new backend with git-annex support.
         Metadata are written in json files with the same name and '.json'
@@ -581,6 +596,18 @@ class TrackingStore(object):
     def __getitem__(self, item):
         return self.get(item)
 
+    def get_file_info(self):
+        """Returns the tracking information about the file
+
+        Returns:
+            a dict with all the stored information
+
+        """
+        backend_info = self.backend.get_file_info(self.filename)
+        if backend_info:
+            return backend_info
+        return json.loads(self.store.get_info())
+
     def append(self, key, value, **kwargs):
         """Appends data to existing variable (if store allows it)
 
@@ -590,6 +617,7 @@ class TrackingStore(object):
             **kwargs: optional arguments for the material store
 
         Returns:
+            None
 
         """
         if self.mode == 'r':
@@ -598,6 +626,17 @@ class TrackingStore(object):
         self.store.append(key, value, **kwargs)
 
     def get_variable_info(self, key, var):
+        """Get information about a variable stored in the store
+
+        Args:
+            key: the key to the variable in the store
+            var: the variable value
+
+        Returns:
+            A string including a description of the variable as obtained from Pandas or at the very least the type and
+            shape of the variable
+
+        """
         info = "Object of class: " + type(var).__name__ + '\n'
         try:
             i = capture_info(self.store[key])

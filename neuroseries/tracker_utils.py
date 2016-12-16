@@ -13,22 +13,6 @@ repos = []
 dependencies = []
 
 
-def get_caller_test():
-    import sys
-
-    print('argv')
-    print(sys.argv)
-    frame_caller = inspect.stack()[1]
-    module = inspect.getmodule(frame_caller[0])
-    print(frame_caller[0])
-    print(module)
-    print(dir(module))
-    filename = module.__file__
-    print(filename)
-    print('from frame')
-    print(frame_caller[1])
-    print(os.path.dirname(filename))
-
 
 def get_caller(back=1):
     """
@@ -269,7 +253,8 @@ def get_environment_yml():
     s_out, s_err = call_conda(('env', 'export'))
     # print(s_out)
     # print(s_err)
-    if len(s_err) > 0:
+    import re
+    if len(s_err) > 0 and not re.match(r"^DEPRECATION", s_err.decode()):
         raise RuntimeError("conda failed with error: " + s_err.decode())
     return s_out.decode()
 
