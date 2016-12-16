@@ -259,6 +259,11 @@ class AnnexRemoteTestCase(unittest.TestCase):
         self.repo.add_remote('origin', '../repo2')
         # check that the remote is there
         self.assertEqual(self.repo.remotes['origin'].name, 'origin')
+        info = self.repo.repo_info()
+        url = info['remotes']['origin']['url']
+        self.assertTrue(url, '../repo2')
+
+
 
     def test_pull(self):
         # test that data can be pulled to normal remote
@@ -408,6 +413,9 @@ class SpecialRemoteTestCase(unittest.TestCase):
         rsync_url = rsync_host + ':' + os.path.join(rsync_root, 'repo1')
         self.repo.add_special_remote_rsync('rsyncer', rsync_url)
         self.assertIn('rsyncer', self.repo.remotes)
+        info = self.repo.repo_info()
+        url = info['special_remotes']['rsyncer']['url']
+        self.assertTrue(url, rsync_url)
 
     def test_push_special(self):
         import os

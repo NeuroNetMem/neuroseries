@@ -273,15 +273,11 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
 
 
 class FilesBackend(object):
-    def __init__(self):
-        pass
-
     def fetch_file(self, filename):
         pass
 
-    @staticmethod
-    def repo_info():
-        return {}
+    def repo_info(self):
+        return {'backend': 'FilesBackend'}
 
     def save_metadata(self, filename, info):
         pass
@@ -293,7 +289,34 @@ class FilesBackend(object):
 default_backend = FilesBackend()
 
 
-class AnnexJsonBackend(object):
+def get_hash_sha256(filename):
+    import hashlib
+    h256 = hashlib.sha256()
+
+    f = open(filename, 'rb')
+
+    for chunk in iter(lambda: f.read(4096), b""):
+        h256.update(chunk)
+
+    my_hash = h256.hexdigest()
+    return my_hash
+
+
+class JsonBackend(FilesBackend):
+    def repo_info(self):
+        return {'backend': 'JsonBackend'}
+
+    def save_metadata(self, filename, info):
+        hash_file = get_hash_sha256(filename)
+        info['hash'] = hash_file
+        import os.path
+        root, _ = os.path.splitext(filename)
+        json_file = root + '.json'
+        with open(json_file, 'w') as f:
+            f.write(json.dumps(info))
+
+
+class AnnexJsonBackend(FilesBackend):
     def __init__(self, dir_name=None, clone_from=None, new_repo=False, description=''):
         """Starts a new backend with git-annex support.
         Metadata are written in json files with the same name and '.json'
@@ -332,7 +355,6 @@ class AnnexJsonBackend(object):
         """
         self.repo.get(filename)
 
-    # noinspection PyMethodMayBeStatic
     def repo_info(self):
 
         """Get Backend-specific information
@@ -341,7 +363,7 @@ class AnnexJsonBackend(object):
 
         """
         repo_info = {'backend': 'AnnexJsonBackend'}
-        # TODO add working tree and remote
+        repo_info.update(self.repo.repo_info())
         return repo_info
 
     def save_metadata(self, filename, info):
@@ -363,7 +385,6 @@ class AnnexJsonBackend(object):
         json_file = root + '.json'
         with open(json_file, 'w') as f:
             f.write(json.dumps(info))
-        f.close()
         self.repo.add(json_file)
 
     def commit(self, filename, message_add=None):

@@ -27,6 +27,10 @@ class AnnexRepo(object):
                 cmd_list.append('"' + description + '"')
             self.git.execute(cmd_list)
         self.remotes = {}
+        self.is_special = {}
+        import collections
+        self.special_urls = collections.defaultdict(lambda: 'None')
+        self.special_type = {}
 
     def add_annex(self, file):
         cmd_list = ['git', 'annex', 'add', file]
@@ -40,6 +44,7 @@ class AnnexRepo(object):
 
     def add_remote(self, name, remote_url):
         self.remotes[name] = self.repo.create_remote(name, remote_url)
+        self.is_special[name] = False
         origin = self.remotes[name]
         origin.fetch()
         self.repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master).checkout()
@@ -65,6 +70,9 @@ class AnnexRepo(object):
             cmd_list.append('autoenable=true')
         self.git.execute(cmd_list)
         self.remotes[name] = self.repo.remotes[name]
+        self.is_special[name] = True
+        self.special_urls[name] = remote_url
+        self.special_type[name] = 'rsync'
 
     def get(self, file):
         cmd_list = ['git', 'annex', 'get', file]
@@ -82,3 +90,15 @@ class AnnexRepo(object):
         cmd_list = ['git', 'annex', 'lookupkey', filename]
         key = self.git.execute(cmd_list)
         return key
+
+    def repo_info(self):
+        normal_remotes = [k for k in self.remotes.keys() if not self.is_special[k]]
+        normal_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.remotes[k].url} for k in normal_remotes}
+
+        special_remotes = [k for k in self.remotes.keys() if  self.is_special[k]]
+        special_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.special_urls[k],
+                                    'type': self.special_type} for k in special_remotes}
+
+        info = {'working_tree_dir': self.repo.working_tree_dir, 'remotes': normal_remotes_info,
+                'special_remotes': special_remotes_info}
+        return info
