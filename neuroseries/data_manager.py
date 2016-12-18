@@ -449,6 +449,9 @@ class AnnexJsonBackend(JsonBackend):
     def get_hash(self, filename):
         return self.repo.lookupkey(filename)
 
+    def push(self, remote_name):
+        self.repo.push(remote_name)
+
 
 def capture_info(item):
     import io

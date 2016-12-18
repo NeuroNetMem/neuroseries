@@ -28,7 +28,6 @@ def create_remote_repo(name):
     pex.run('git remote add laptop ../repo1')
 
 
-@unittest.skip
 class TrackerInitTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
@@ -154,24 +153,35 @@ class TrackerInitTestCase(unittest.TestCase):
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
         self.store2.close()
 
-    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    @parameterized.expand([('files',), ('json'), ('annex',)])
     def testStoreArray(self, backend_type):
-        backend = backend_type()
+        if backend_type == 'files':
+            backend = nts.FilesBackend()
+        elif backend_type == 'json':
+            backend = nts.JsonBackend()
+        else:
+            backend = nts.AnnexJsonBackend()
 
-        if backend_type == nts.AnnexJsonBackend:
+        if backend_type == 'annex':
             import os
             os.chdir('..')
             create_remote_repo('repo2')
             os.chdir('../repo1')
+            backend.repo.add_remote('origin', '../repo2')
         self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
         arr = np.arange(100)
         self.store['arr'] = arr
         self.store.close()
 
-        if backend_type == nts.AnnexJsonBackend:
-            backend.push()
-            backend.drop('store.h5')
-        backend = backend_type()
+        if backend_type == 'annex':
+            backend.repo.push_annex('origin')
+            backend.repo.drop('store.h5')
+        if backend_type == 'files':
+            backend = nts.FilesBackend()
+        elif backend_type == 'json':
+            backend = nts.JsonBackend()
+        else:
+            backend = nts.AnnexJsonBackend()
         self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
         arr2 = self.store2['arr']
         np.testing.assert_array_almost_equal_nulp(arr, arr2)
@@ -213,7 +223,10 @@ class GenericFileStoreTestCase(unittest.TestCase):
             os.chdir('..')
             create_remote_repo('repo2')
             os.chdir('../repo1')
+            pex.run('git init')
+            pex.run('git annex init')
             backend = nts.AnnexJsonBackend()
+            backend.repo.add_remote('origin', '../repo2')
 
         with open('file2.txt', 'w') as f:
             content = make_random_text(1000)
@@ -226,13 +239,13 @@ class GenericFileStoreTestCase(unittest.TestCase):
             info = json.loads(f.read())
 
         self.assertEqual(info['file'], 'file2.txt')
-        if backend == 'annex':
+        if backend_type == 'annex':
             import git
             repo = git.Repo.init('.')
             self.assertEqual(repo.git.execute(['git', 'ls-files', 'file2.txt', '--error-unmatch']), 'file2.txt')
             self.assertEqual(repo.git.execute(['git', 'ls-files', 'file2.json', '--error-unmatch']), 'file2.json')
-            backend.push()
-            backend.drop('file2.txt')
+            backend.repo.push_annex('origin')
+            backend.repo.drop('file2.txt')
 
         nts.register_input('file2.txt', backend=backend)
         self.assertTrue(os.path.exists('file2.txt'))
