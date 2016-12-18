@@ -272,6 +272,21 @@ class PandasHDFStoreWithTracking(pd.HDFStore):
             super().put(key, value, **kwargs)
 
 
+class _GenericStore(object):
+    def __init__(self, filename, mode):
+        self.filename = filename
+        self.mode = mode
+
+    def get_info(self):
+        pass
+
+    def put_info(self, info):
+        pass
+
+    def close(self):
+        pass
+
+
 class FilesBackend(object):
     def fetch_file(self, filename):
         pass
@@ -291,6 +306,11 @@ class FilesBackend(object):
 
 
 default_backend = FilesBackend()
+
+
+def set_default_backend(backend):
+    global default_backend
+    default_backend = backend
 
 
 def get_hash_sha256(filename):
@@ -328,7 +348,13 @@ class JsonBackend(FilesBackend):
                 js_string = f.read()
             return json.loads(js_string)
         else:
-            return None
+            file_hash = self.get_hash('filename')
+            info = {'file': filename, 'hash': file_hash}
+            info.update(self.repo_info())
+            return info
+
+    def get_hash(self, filename):
+        return get_hash_sha256(filename)
 
 
 class AnnexJsonBackend(JsonBackend):
@@ -420,6 +446,9 @@ class AnnexJsonBackend(JsonBackend):
             message += message_add
         self.repo.commit(message)
 
+    def get_hash(self, filename):
+        return self.repo.lookupkey(filename)
+
 
 def capture_info(item):
     import io
@@ -465,7 +494,8 @@ class TrackingStore(object):
     backend is defined once per run and remains a property of run TODO
     """
 
-    def __init__(self, filename, mode='r', backend=None, store_type=PandasHDFStoreWithTracking, **kwargs):
+    def __init__(self, filename, mode='r', backend=None, store_type=PandasHDFStoreWithTracking, comment=None,
+                 **kwargs):
         """Initialize the Store
 
         Args:
@@ -490,14 +520,21 @@ class TrackingStore(object):
         self.store = store_type(filename, mode, **kwargs)
 
         if mode == 'r':
-            self.info = json.loads(self.store.get_info())
-            dependencies.append(self.info)
+            self.info = self.backend.get_file_info(self.filename)
+            if self.info is None:  # if backend can't help, let's look into the store
+                self.info = json.loads(self.store.get_info())
+
+            if self.info is not None:
+                dependencies.append(self.info)
         else:
             import datetime
             repo_info = self.backend.repo_info()
             self.info = {'run': track_info, 'date_created': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                          'dependencies': dependencies, 'file': filename, 'hash': 'NULL', 'repo_info': repo_info,
                          'variables': {}}
+            if comment:
+                self.info['comment'] = comment
+
             self.store.put_info(json.dumps(self.info))
         print(dependencies)
 
@@ -656,4 +693,17 @@ class TrackingStore(object):
                     warnings.warn("Cannot determine info for variable. ")
         return info
 
+
 HDFStore = TrackingStore
+
+
+def store_file(filename, backend=None, comment=None):
+    # noinspection PyTypeChecker
+    store = TrackingStore(filename, mode='w', store_type=_GenericStore,  backend=backend, comment=comment)
+    store.close()
+
+
+def register_input(filename, backend=None):
+    # noinspection PyTypeChecker
+    store = TrackingStore(filename, mode='r', store_type=_GenericStore, backend=backend)
+    store.close()
