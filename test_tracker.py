@@ -10,7 +10,7 @@ from test_annex import prepare_sandbox, change_mod, make_random_text
 # import inspect
 
 # noinspection PyUnresolvedReferences
-import neuroseries as nts
+# import neuroseries as nts
 
 
 def create_remote_repo(name):
