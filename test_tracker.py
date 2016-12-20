@@ -153,7 +153,7 @@ class TrackerInitTestCase(unittest.TestCase):
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
         self.store2.close()
 
-    @parameterized.expand([('files',), ('json'), ('annex',)])
+    @parameterized.expand([('files',), ('json',), ('annex',)])
     def testStoreArray(self, backend_type):
         if backend_type == 'files':
             backend = nts.FilesBackend()
@@ -214,7 +214,7 @@ class GenericFileStoreTestCase(unittest.TestCase):
             pass
 
     @parameterized.expand([('json',), ('annex',)])
-    def test_write_read_file(self, backend_type):
+    def test_write_read(self, backend_type):
         os.mkdir('repo1')
         os.chdir('repo1')
         if backend_type == 'json':
@@ -246,6 +246,58 @@ class GenericFileStoreTestCase(unittest.TestCase):
             self.assertEqual(repo.git.execute(['git', 'ls-files', 'file2.json', '--error-unmatch']), 'file2.json')
             backend.repo.push_annex('origin')
             backend.repo.drop('file2.txt')
+
+        nts.register_input('file2.txt', backend=backend)
+        self.assertTrue(os.path.exists('file2.txt'))
+
+        with open('file2.txt', 'r') as f:
+            read_content = f.read()
+
+        self.assertEqual(read_content, content)
+
+        files_dependencies = [t['file'] for t in nts.dependencies]
+        self.assertIn('file2.txt', files_dependencies)
+
+    @parameterized.expand([('json',), ('annex',)])
+    def test_write_read_file_down_directory(self, backend_type):
+        os.mkdir('repo1')
+        os.chdir('repo1')
+        if backend_type == 'json':
+            backend = nts.JsonBackend()
+        else:
+            os.chdir('..')
+            create_remote_repo('repo2')
+            os.chdir('../repo1')
+            pex.run('git init')
+            pex.run('git annex init')
+            backend = nts.AnnexJsonBackend()
+            backend.repo.add_remote('origin', '../repo2')
+
+        os.mkdir('child_dir')
+        os.chdir('child_dir')
+        with open('file2.txt', 'w') as f:
+            content = make_random_text(1000)
+            f.write(content)
+
+
+        self.store = nts.store_file('file2.txt',  backend=backend, comment='file 2 for figure')
+
+        self.assertTrue(os.path.exists('file2.json'))
+        with open('file2.json', 'r') as f:
+            info = json.loads(f.read())
+
+        self.assertEqual(info['file'], 'file2.txt')
+        if backend_type == 'annex':
+            import git
+            os.chdir('..')
+            repo = git.Repo.init('.')
+            self.assertEqual(repo.git.execute(['git', 'ls-files', 'child_dir/file2.txt', '--error-unmatch']),
+                             'child_dir/file2.txt')
+            self.assertEqual(repo.git.execute(['git', 'ls-files', 'child_dir/file2.json', '--error-unmatch']),
+                             'child_dir/file2.json')
+            backend.repo.push_annex('origin')
+            backend.repo.drop('child_dir/file2.txt')
+            os.chdir('child_dir')
 
         nts.register_input('file2.txt', backend=backend)
         self.assertTrue(os.path.exists('file2.txt'))

@@ -32,11 +32,18 @@ class AnnexRepo(object):
         self.special_urls = collections.defaultdict(lambda: 'None')
         self.special_type = {}
 
+    def path_in_repo(self, filename):
+        import os
+        path = os.path.relpath(os.path.abspath(filename), self.repo.working_tree_dir)
+        return path
+
     def add_annex(self, file):
+        file = self.path_in_repo(file)
         cmd_list = ['git', 'annex', 'add', file]
         self.git.execute(cmd_list)
 
     def add(self, file):
+        file = self.path_in_repo(file)
         self.repo.index.add([file])
 
     def commit(self, message):
@@ -75,10 +82,12 @@ class AnnexRepo(object):
         self.special_type[name] = 'rsync'
 
     def get(self, file):
+        file = self.path_in_repo(file)
         cmd_list = ['git', 'annex', 'get', file]
         self.git.execute(cmd_list)
 
     def drop(self, file):
+        file = self.path_in_repo(file)
         cmd_list = ['git', 'annex', 'drop', file]
         self.git.execute(cmd_list)
 
@@ -87,11 +96,12 @@ class AnnexRepo(object):
         self.git.execute(cmd_list)
 
     def lookupkey(self, filename):
+        filename = self.path_in_repo(filename)
         cmd_list = ['git', 'annex', 'lookupkey', filename]
         key = self.git.execute(cmd_list)
         return key
 
-    def repo_info(self):
+    def repo_info(self, file):
         normal_remotes = [k for k in self.remotes.keys() if not self.is_special[k]]
         normal_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.remotes[k].url} for k in normal_remotes}
 
@@ -99,6 +109,7 @@ class AnnexRepo(object):
         special_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.special_urls[k],
                                     'type': self.special_type} for k in special_remotes}
 
+        path = self.path_in_repo(file)
         info = {'working_tree_dir': self.repo.working_tree_dir, 'remotes': normal_remotes_info,
-                'special_remotes': special_remotes_info}
+                'special_remotes': special_remotes_info, 'path':path}
         return info

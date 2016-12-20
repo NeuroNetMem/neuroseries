@@ -3,14 +3,15 @@ from .git_annex import AnnexRepo
 import pandas as pd
 import numpy as np
 import json
-_dont_check_git = True
-_no_git_repo = True
+_dont_check_git = False
+_no_git_repo = False
 
 
 # noinspection PyProtectedMember
 def _get_init_info():
-    """This gets all the needed information about the run at the beginning
+    """This gets all the needed information about the run at the beginning.
 
+    It is automatically called at module import
     Returns:
         a dict about the information
     """
@@ -291,8 +292,8 @@ class FilesBackend(object):
     def fetch_file(self, filename):
         pass
 
-    def repo_info(self):
-        return {'backend': 'FilesBackend'}
+    def repo_info(self, filename):
+        return {'backend': 'FilesBackend', 'file': filename}
 
     def save_metadata(self, filename, info):
         pass
@@ -327,8 +328,8 @@ def get_hash_sha256(filename):
 
 
 class JsonBackend(FilesBackend):
-    def repo_info(self):
-        return {'backend': 'JsonBackend'}
+    def repo_info(self, filename):
+        return {'backend': 'JsonBackend', 'file': filename}
 
     def save_metadata(self, filename, info):
         hash_file = get_hash_sha256(filename)
@@ -350,7 +351,7 @@ class JsonBackend(FilesBackend):
         else:
             file_hash = self.get_hash('filename')
             info = {'file': filename, 'hash': file_hash}
-            info.update(self.repo_info())
+            info.update(self.repo_info(filename))
             return info
 
     def get_hash(self, filename):
@@ -396,7 +397,7 @@ class AnnexJsonBackend(JsonBackend):
         """
         self.repo.get(filename)
 
-    def repo_info(self):
+    def repo_info(self, filename):
 
         """Get Backend-specific information
 
@@ -404,7 +405,7 @@ class AnnexJsonBackend(JsonBackend):
 
         """
         repo_info = {'backend': 'AnnexJsonBackend'}
-        repo_info.update(self.repo.repo_info())
+        repo_info.update(self.repo.repo_info(filename))
         return repo_info
 
     def save_metadata(self, filename, info):
@@ -531,7 +532,7 @@ class TrackingStore(object):
                 dependencies.append(self.info)
         else:
             import datetime
-            repo_info = self.backend.repo_info()
+            repo_info = self.backend.repo_info(self.filename)
             self.info = {'run': track_info, 'date_created': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                          'dependencies': dependencies, 'file': filename, 'hash': 'NULL', 'repo_info': repo_info,
                          'variables': {}}
