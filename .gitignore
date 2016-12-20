@@ -10,3 +10,5 @@ notebooks
 store.h5
 /Untitled.ipynb
 /.ipynb_checkpoints/
+/.neuroseries
+/neuroseries.yml
