@@ -70,7 +70,12 @@ class InitAnnexTestCase(unittest.TestCase):
         # noinspection PyGlobalUndefined
         global nts
         # noinspection PyUnresolvedReferences
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
         import os
         # noinspection PyBroadException
 
@@ -144,7 +149,12 @@ class AnnexFilesTestCase(unittest.TestCase):
         # noinspection PyGlobalUndefined
         global nts
         # noinspection PyUnresolvedReferences
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
         import os
         # noinspection PyBroadException
 
@@ -206,7 +216,12 @@ class AnnexRemoteTestCase(unittest.TestCase):
         # noinspection PyGlobalUndefined
         global nts
         # noinspection PyUnresolvedReferences
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
         import os
         # noinspection PyBroadException
 
@@ -367,7 +382,12 @@ class SpecialRemoteTestCase(unittest.TestCase):
         # noinspection PyGlobalUndefined
         global nts
         # noinspection PyUnresolvedReferences
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
         import os
         # noinspection PyBroadException
 

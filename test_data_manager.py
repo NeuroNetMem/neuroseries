@@ -132,15 +132,12 @@ class UtilsTestCase(unittest.TestCase):
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
             import neuroseries as nts
-
             d = {'a': 5, 'b': [1, 2, 3], 'c':
                  {'a1': 'aaa', 'c': 54}}
-
             import json
             s1 = json.dumps(d)
             ss = nts.str_to_series(s1)
             s2 = nts.series_to_str(ss)
             self.assertEqual(s1, s2)
-
             d2 = json.loads(s2)
             self.assertEqual(d, d2)

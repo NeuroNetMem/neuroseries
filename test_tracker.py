@@ -32,7 +32,12 @@ class TrackerInitTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
         global nts
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
         from scipy.io import loadmat
         self.mat_data1 = loadmat(
             '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
@@ -192,7 +197,12 @@ class GenericFileStoreTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
         global nts
-        import neuroseries as nts
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            import neuroseries as nts
 
         self.start_dir = os.getcwd()
         prepare_sandbox()
