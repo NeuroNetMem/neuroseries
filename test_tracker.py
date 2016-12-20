@@ -10,7 +10,12 @@ from test_annex import prepare_sandbox, change_mod, make_random_text
 # import inspect
 
 # noinspection PyUnresolvedReferences
-# import neuroseries as nts
+from unittest.mock import patch
+import inspect
+cur_file = inspect.stack(0)[0][1]
+test_args = [cur_file, 1]
+with patch('sys.argv', test_args):
+    import neuroseries as nts
 
 
 def create_remote_repo(name):
