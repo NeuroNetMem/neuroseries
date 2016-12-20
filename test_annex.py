@@ -3,7 +3,7 @@ import unittest
 import pexpect as pex
 
 # noinspection PyUnresolvedReferences
-import neuroseries as nts
+# import neuroseries as nts
 
 import random
 import string
