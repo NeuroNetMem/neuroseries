@@ -2,8 +2,6 @@ import unittest
 # from nose_parameterized import parameterized
 import pexpect as pex
 
-# noinspection PyUnresolvedReferences
-# import neuroseries as nts
 
 import random
 import string
@@ -68,14 +66,15 @@ def prepare_sandbox():
 class InitAnnexTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         # noinspection PyUnresolvedReferences
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            # noinspection PyUnresolvedReferences
+            import dataman as dtm
         import os
         # noinspection PyBroadException
 
@@ -89,8 +88,8 @@ class InitAnnexTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
 
         import os
         import shutil
@@ -108,7 +107,7 @@ class InitAnnexTestCase(unittest.TestCase):
         os.mkdir('repo1')
         os.chdir('repo1')
 
-        self.annex = nts.AnnexRepo()
+        self.annex = dtm.AnnexRepo()
         ch = pex.spawn('git status')
         self.assertEqual(ch.expect('On branch master.*'), 0)
 
@@ -119,7 +118,7 @@ class InitAnnexTestCase(unittest.TestCase):
         pex.run('git init')
         pex.run('git annex init')
 
-        self.annex = nts.AnnexRepo()
+        self.annex = dtm.AnnexRepo()
         ch = pex.spawn('git status')
         self.assertEqual(ch.expect('On branch master.*'), 0)
 
@@ -137,9 +136,9 @@ class InitAnnexTestCase(unittest.TestCase):
         os.chdir('..')
         os.mkdir('repo1')
         os.chdir('repo1')
-        self.annex = nts.AnnexRepo(path=None, clone_from='../repo2')
+        self.annex = dtm.AnnexRepo(path=None, clone_from='../repo2')
 
-        self.annex = nts.AnnexRepo()
+        self.annex = dtm.AnnexRepo()
         ch = pex.spawn('git status')
         self.assertEqual(ch.expect('On branch master.*'), 0)
 
@@ -147,14 +146,15 @@ class InitAnnexTestCase(unittest.TestCase):
 class AnnexFilesTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         # noinspection PyUnresolvedReferences
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            # noinspection PyUnresolvedReferences
+            import dataman as dtm
         import os
         # noinspection PyBroadException
 
@@ -169,8 +169,8 @@ class AnnexFilesTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
 
         import os
         import shutil
@@ -191,7 +191,7 @@ class AnnexFilesTestCase(unittest.TestCase):
         ch = pex.spawn('git status')
         self.assertEqual(ch.expect('.*Untracked files:.*file1.txt.*'), 0)
 
-        self.annex = nts.AnnexRepo()
+        self.annex = dtm.AnnexRepo()
         self.annex.add('file1.txt')
 
         ch = pex.spawn('git status')
@@ -202,7 +202,7 @@ class AnnexFilesTestCase(unittest.TestCase):
         f = open('file2.txt', 'w')
         f.write(make_random_text(1000))
         f.close()
-        self.annex = nts.AnnexRepo()
+        self.annex = dtm.AnnexRepo()
         self.annex.add_annex('file2.txt')
 
         ch = pex.spawn('git status')
@@ -214,14 +214,15 @@ class AnnexFilesTestCase(unittest.TestCase):
 class AnnexRemoteTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         # noinspection PyUnresolvedReferences
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            # noinspection PyUnresolvedReferences
+            import dataman as dtm
         import os
         # noinspection PyBroadException
 
@@ -236,8 +237,8 @@ class AnnexRemoteTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
 
         import os
         import shutil
@@ -269,7 +270,7 @@ class AnnexRemoteTestCase(unittest.TestCase):
         os.chdir('..')
         self.create_remote_repo('repo2')
         os.chdir('../repo1')
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         # add a regular remote
         self.repo.add_remote('origin', '../repo2')
         # check that the remote is there
@@ -278,14 +279,13 @@ class AnnexRemoteTestCase(unittest.TestCase):
         url = info['remotes']['origin']['url']
         self.assertTrue(url, '../repo2')
 
-
     def test_pull(self):
         # test that data can be pulled to normal remote
         import os
         os.chdir('..')
         self.create_remote_repo('repo2')
         os.chdir('../repo1')
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         self.repo.add_remote('origin', '../repo2')
         self.repo.pull('origin')
         self.assertTrue(os.path.islink('file1.txt'))
@@ -308,7 +308,7 @@ class AnnexRemoteTestCase(unittest.TestCase):
         os.chdir('..')
         self.create_remote_repo('repo2')
         os.chdir('../repo1')
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         self.repo.add_remote('origin', '../repo2')
         self.repo.pull('origin')
 
@@ -344,7 +344,7 @@ class AnnexRemoteTestCase(unittest.TestCase):
         os.chdir('..')
         self.create_remote_repo('repo2')
         os.chdir('../repo1')
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         self.repo.add_remote('origin', '../repo2')
         self.repo.pull('origin')
 
@@ -369,7 +369,7 @@ class AnnexRemoteTestCase(unittest.TestCase):
         os.chdir('..')
         self.create_remote_repo('repo2')
         os.chdir('../repo1')
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         self.repo.add_remote('origin', '../repo2')
         self.repo.pull('origin')
         self.assertTrue(os.path.islink('file1.txt'))
@@ -380,14 +380,15 @@ class AnnexRemoteTestCase(unittest.TestCase):
 class SpecialRemoteTestCase(unittest.TestCase):
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         # noinspection PyUnresolvedReferences
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            # noinspection PyUnresolvedReferences
+            import dataman as dtm
         import os
         # noinspection PyBroadException
 
@@ -403,8 +404,8 @@ class SpecialRemoteTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
 
         import os
         import shutil
@@ -428,7 +429,7 @@ class SpecialRemoteTestCase(unittest.TestCase):
 
     def test_add_special_remote(self):
         import os
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         rsync_url = rsync_host + ':' + os.path.join(rsync_root, 'repo1')
         self.repo.add_special_remote_rsync('rsyncer', rsync_url)
         self.assertIn('rsyncer', self.repo.remotes)
@@ -438,7 +439,7 @@ class SpecialRemoteTestCase(unittest.TestCase):
 
     def test_push_special(self):
         import os
-        self.repo = nts.AnnexRepo()
+        self.repo = dtm.AnnexRepo()
         rsync_url = rsync_host + ':' + os.path.join(rsync_root, 'repo1')
         self.repo.add_special_remote_rsync('rsyncer', rsync_url)
         self.assertIn('rsyncer', self.repo.remotes)

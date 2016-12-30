@@ -1,17 +1,17 @@
 import inspect
-import os.path
-import git
 import os
+import os.path
+import os.path
 import sys
 from subprocess import Popen, PIPE
-import os.path
+
+import git
 
 ROOT_PREFIX = None
 
 repos = []
 
 dependencies = []
-
 
 
 def get_caller(back=1):
@@ -62,7 +62,7 @@ def is_repo_notebook_clean():
 
     """
 
-    from neuroseries import track_info
+    from dataman import track_info
     script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(track_info['entry_point']))
     if not is_dirty:
         return True
@@ -74,7 +74,7 @@ def is_repo_notebook_clean():
     changed_file = d[0].a_path
 
     _, notebook_path = get_notebook_name()
-    from .data_manager import track_info
+    from dataman.data_manager import track_info
     working_tree = track_info['repos'][0]['working_tree_dir']
     notebook_name = os.path.relpath(notebook_path, working_tree)
 
@@ -92,7 +92,7 @@ def commit_notebook():
         False otherwise
 
     """
-    from neuroseries import track_info
+    from dataman import track_info
     script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(track_info['entry_point']))
     ix = script_repo.index
     notebook_name, _ = get_notebook_name()
@@ -107,12 +107,12 @@ def in_ipynb():
     :return: True if we are running in a notebook, False otherwise
     """
     try:
+        # noinspection PyUnresolvedReferences,PyUnusedLocal
         cfg = get_ipython().config
         # if cfg['IPKernelApp']['parent_appname'] == 'ipython-notebook':
         #     return True
         # else:
         #     return False
-        print(cfg)
         return True
     except NameError:
         return False
@@ -168,7 +168,7 @@ def get_notebook_name(prefix=None):
     :return: notebook_name: the notebook file name notebook_path: the notebook path name
     """
     if not prefix:
-        from .data_manager import track_info
+        from dataman.data_manager import track_info
         prefix = track_info['repos'][0]['working_tree_dir']
 
     stack = inspect.stack()
@@ -231,13 +231,17 @@ def call_conda(extra_args, abspath=True):
 
     cmd_list.extend(extra_args)
 
+    env1 = os.environ.copy()
+    if 'PYTHONEXECUTABLE' in env1:
+        del env1['PYTHONEXECUTABLE']
+
     try:
         if abspath:
-            p = Popen(' '.join(cmd_list), stdout=PIPE, stderr=PIPE, shell=True)
+            p = Popen(' '.join(cmd_list), stdout=PIPE, stderr=PIPE, shell=True, env=env1)
         else:
             # unix_path = os.getenv('PATH')
             # p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, env={'PYTHONPATH': '', 'PATH': unix_path})
-            p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, shell=True)
+            p = Popen(cmd_list, stdout=PIPE, stderr=PIPE, shell=True, env=env1)
     except OSError:
         raise Exception("could not invoke {}\n".format(extra_args))
     return p.communicate()
@@ -248,11 +252,8 @@ def get_environment_yml():
     gets the current environment in a form that can be used by conda to replicate it
     :return: a string including the content of the environment.yml file
     """
-    # import os
-    # print(os.environ)
+
     s_out, s_err = call_conda(('env', 'export'))
-    # print(s_out)
-    # print(s_err)
     import re
     if len(s_err) > 0 and not re.match(r"^DEPRECATION", s_err.decode()):
         raise RuntimeError("conda failed with error: " + s_err.decode())

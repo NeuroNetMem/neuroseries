@@ -1,10 +1,13 @@
-from .tracker_utils import get_repo_info, in_ipynb, get_environment_yml
-from .git_annex import AnnexRepo
-import pandas as pd
-import numpy as np
 import json
-_dont_check_git = False
-_no_git_repo = False
+
+import numpy as np
+import pandas as pd
+
+from dataman.tracker_utils import get_repo_info, in_ipynb, get_environment_yml
+from .git_annex import AnnexRepo
+
+_dont_check_git = True
+_no_git_repo = True
 
 
 # noinspection PyProtectedMember

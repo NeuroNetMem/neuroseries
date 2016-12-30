@@ -1,4 +1,5 @@
 import unittest
+
 from nose_parameterized import parameterized
 
 
@@ -80,9 +81,9 @@ grade: {}
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries
-            print(neuroseries.track_info['config'])
-        self.assertEqual(neuroseries.track_info['entry_point'], cur_file)
+            import dataman
+            print(dataman.track_info['config'])
+        self.assertEqual(dataman.track_info['entry_point'], cur_file)
 
     def test_venv(self):
         from unittest.mock import patch
@@ -90,8 +91,8 @@ grade: {}
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries
-            self.assertTrue('pandas' in neuroseries.track_info['venv'])
+            import dataman
+            self.assertTrue('pandas' in dataman.track_info['venv'])
 
     @parameterized.expand([(1,), (2,), (3,), (4,)])
     def test_config_files(self, grade):
@@ -101,10 +102,10 @@ grade: {}
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
             self.make_dummy_configs(grade)
-            import neuroseries
-            neuroseries.track_info = neuroseries.data_manager._get_init_info()
-            self.assertEqual(len(neuroseries.track_info['config']['list']), grade + 2)
-            self.assertEqual(neuroseries.track_info['config']['grade'], grade)
+            import dataman
+            dataman.track_info = dataman.data_manager._get_init_info()
+            self.assertEqual(len(dataman.track_info['config']['list']), grade + 2)
+            self.assertEqual(dataman.track_info['config']['grade'], grade)
             self.remove_files()
 
 
@@ -131,13 +132,13 @@ class UtilsTestCase(unittest.TestCase):
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            import dataman as dtm
             d = {'a': 5, 'b': [1, 2, 3], 'c':
                  {'a1': 'aaa', 'c': 54}}
             import json
             s1 = json.dumps(d)
-            ss = nts.str_to_series(s1)
-            s2 = nts.series_to_str(ss)
+            ss = dtm.str_to_series(s1)
+            s2 = dtm.series_to_str(ss)
             self.assertEqual(s1, s2)
             d2 = json.loads(s2)
             self.assertEqual(d, d2)

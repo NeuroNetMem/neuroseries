@@ -4,12 +4,13 @@ import numpy as np
 import pandas as pd
 from unittest.mock import patch
 import inspect
+import neuroseries as nts
 
 cur_file = inspect.stack(0)[0][1]
 test_args = [cur_file, 1]
 print(cur_file)
 with patch('sys.argv', test_args):
-    import neuroseries as nts
+    import dataman as dtm
 
 
 class TsTestCase(unittest.TestCase):
@@ -530,8 +531,8 @@ class HDFStoreTestCase(unittest.TestCase):
             os.remove('store.h5')
         except:
             pass
-        backend = nts.FilesBackend()
-        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
+        backend = dtm.FilesBackend()
+        self.store = dtm.HDFStore('store.h5', backend=backend, mode='w')
 
         self.a1 = self.mat_data1['a1'].ravel()
         self.b1 = self.mat_data1['b1'].ravel()
@@ -565,14 +566,14 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.tsd = data_class(self.tsd_t, self.tsd_d)
 
-        self.store = nts.HDFStore('store.h5', backend=nts.FilesBackend(), mode='w')
+        self.store = dtm.HDFStore('store.h5', backend=dtm.FilesBackend(), mode='w')
         self.int1.store(self.store, 'int1')
         self.int2.store(self.store, 'int2')
         self.tsd.store(self.store, 'tsd')
 
         self.store.close()
 
-        with nts.HDFStore('store.h5', backend=nts.FilesBackend()) as store:
+        with dtm.HDFStore('store.h5', backend=dtm.FilesBackend()) as store:
             k = store.keys()
             self.assertIn('/int1', k)
             self.assertIn('/int2', k)
@@ -603,12 +604,12 @@ class HDFStoreTestCase(unittest.TestCase):
 
         self.tsd = data_class(self.tsd_t, self.tsd_d)
 
-        self.store = nts.HDFStore('store.h5', backend=nts.FilesBackend(), mode='w')
+        self.store = dtm.HDFStore('store.h5', backend=dtm.FilesBackend(), mode='w')
         self.int1.store(self.store, 'int1')
         self.tsd.store(self.store, 'tsd')
         self.store.close()
 
-        with nts.HDFStore('store.h5', backend=nts.FilesBackend()) as store:
+        with dtm.HDFStore('store.h5', backend=dtm.FilesBackend()) as store:
             all_vars = nts.extract_from(store)
         self.assertEqual(all_vars['int1'].nts_class, 'IntervalSet')
         self.assertIsInstance(all_vars['int1'], nts.IntervalSet)

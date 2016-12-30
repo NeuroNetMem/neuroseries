@@ -71,6 +71,7 @@ class AnnexRepo(object):
     def push(self, remote_name):
         self.remotes[remote_name].push()
 
+    # noinspection PyUnusedLocal
     def add_special_remote_rsync(self, name, remote_url, auto_enable=True, **kwargs):
         cmd_list = ['git', 'annex', 'initremote', name, 'type=rsync', 'rsyncurl=' + remote_url, 'encryption=none']
         if auto_enable:
@@ -105,11 +106,11 @@ class AnnexRepo(object):
         normal_remotes = [k for k in self.remotes.keys() if not self.is_special[k]]
         normal_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.remotes[k].url} for k in normal_remotes}
 
-        special_remotes = [k for k in self.remotes.keys() if  self.is_special[k]]
+        special_remotes = [k for k in self.remotes.keys() if self.is_special[k]]
         special_remotes_info = {k: {'name': self.remotes[k].name, 'url': self.special_urls[k],
                                     'type': self.special_type} for k in special_remotes}
 
         path = self.path_in_repo(file)
         info = {'working_tree_dir': self.repo.working_tree_dir, 'remotes': normal_remotes_info,
-                'special_remotes': special_remotes_info, 'path':path}
+                'special_remotes': special_remotes_info, 'path': path}
         return info

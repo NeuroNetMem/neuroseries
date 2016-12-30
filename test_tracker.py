@@ -9,13 +9,16 @@ from test_annex import prepare_sandbox, change_mod, make_random_text
 # from unittest.mock import patch
 # import inspect
 
+import neuroseries as nts
+
 # noinspection PyUnresolvedReferences
 from unittest.mock import patch
 import inspect
 cur_file = inspect.stack(0)[0][1]
 test_args = [cur_file, 1]
 with patch('sys.argv', test_args):
-    import neuroseries as nts
+    # noinspection PyUnresolvedReferences
+    import dataman as dtm
 
 
 def create_remote_repo(name):
@@ -34,15 +37,17 @@ def create_remote_repo(name):
 
 
 class TrackerInitTestCase(unittest.TestCase):
+    # noinspection PyShadowingNames
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            # noinspection PyUnresolvedReferences
+            import dataman as dtm
         from scipy.io import loadmat
         self.mat_data1 = loadmat(
             '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
@@ -53,8 +58,6 @@ class TrackerInitTestCase(unittest.TestCase):
             os.remove('store.h5')
         except:
             pass
-        # nts.track_info = nts.data_manager._get_init_info()
-        # nts.dependencies = []
 
         self.a1 = self.mat_data1['a1'].ravel()
         self.b1 = self.mat_data1['b1'].ravel()
@@ -79,8 +82,8 @@ class TrackerInitTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
         import os
         # noinspection PyBroadException
         try:
@@ -111,13 +114,11 @@ class TrackerInitTestCase(unittest.TestCase):
         except:
             pass
 
-    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    @parameterized.expand([(dtm.FilesBackend,), (dtm.JsonBackend,), (dtm.AnnexJsonBackend,)])
     def testTrackerInfo(self, backend_class):
         import json
         backend = backend_class()
-        # nts.reset_dependencies()
-        # self.assertEqual(nts.data_manager.dependencies, [])
-        # self.assertEqual(nts.dependencies, [])
+
         import os
         # noinspection PyBroadException
         try:
@@ -125,15 +126,13 @@ class TrackerInitTestCase(unittest.TestCase):
         except:
             pass
 
-        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
+        self.store = dtm.HDFStore('store.h5', backend=backend, mode='w')
         d = self.store.info
-        # self.assertEqual(nts.dependencies, [])
         self.assertEqual(set(d.keys()),
                          {'repo_info', 'date_created', 'hash', 'dependencies', 'file', 'variables', 'run'})
         self.assertEqual(d['variables'], {})
-        # self.assertEqual(nts.dependencies, [])
         self.assertEqual(d['dependencies'], [])
-        self.assertEqual(d['run'], nts.track_info)
+        self.assertEqual(d['run'], dtm.track_info)
         self.assertEqual(d['file'], 'store.h5')
         self.assertEqual(d['hash'], 'NULL')
 
@@ -142,23 +141,23 @@ class TrackerInitTestCase(unittest.TestCase):
         self.tsd.store(self.store, 'tsd')
         self.store.close()
 
-        self.store = nts.HDFStore('store.h5', backend=backend, mode='r')
-        d = json.loads(nts.series_to_str(self.store['file_info']))
+        self.store = dtm.HDFStore('store.h5', backend=backend, mode='r')
+        d = json.loads(dtm.series_to_str(self.store['file_info']))
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
 
-    @parameterized.expand([(nts.FilesBackend,), (nts.JsonBackend,), (nts.AnnexJsonBackend,)])
+    @parameterized.expand([(dtm.FilesBackend,), (dtm.JsonBackend,), (dtm.AnnexJsonBackend,)])
     def testOpenCloseFile(self, backend_type):
         backend = backend_type()
-        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
+        self.store = dtm.HDFStore('store.h5', backend=backend, mode='w')
         self.int1.store(self.store, 'int1')
         self.int2.store(self.store, 'int2')
         self.tsd.store(self.store, 'tsd')
         self.store.close()
 
-        backend = nts.FilesBackend()
-        self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
-        self.assertTrue(len(nts.dependencies) > 0)
-        self.assertEqual(nts.dependencies[0]['file'], 'store.h5')
+        backend = dtm.FilesBackend()
+        self.store2 = dtm.HDFStore('store.h5', backend=backend, mode='r')
+        self.assertTrue(len(dtm.dependencies) > 0)
+        self.assertEqual(dtm.dependencies[0]['file'], 'store.h5')
         d = self.store2.get_file_info()
         self.assertEqual(set(d['variables'].keys()), {'tsd', 'int2', 'int1'})
         self.store2.close()
@@ -166,11 +165,11 @@ class TrackerInitTestCase(unittest.TestCase):
     @parameterized.expand([('files',), ('json',), ('annex',)])
     def testStoreArray(self, backend_type):
         if backend_type == 'files':
-            backend = nts.FilesBackend()
+            backend = dtm.FilesBackend()
         elif backend_type == 'json':
-            backend = nts.JsonBackend()
+            backend = dtm.JsonBackend()
         else:
-            backend = nts.AnnexJsonBackend()
+            backend = dtm.AnnexJsonBackend()
 
         if backend_type == 'annex':
             import os
@@ -178,7 +177,7 @@ class TrackerInitTestCase(unittest.TestCase):
             create_remote_repo('repo2')
             os.chdir('../repo1')
             backend.repo.add_remote('origin', '../repo2')
-        self.store = nts.HDFStore('store.h5', backend=backend, mode='w')
+        self.store = dtm.HDFStore('store.h5', backend=backend, mode='w')
         arr = np.arange(100)
         self.store['arr'] = arr
         self.store.close()
@@ -187,27 +186,27 @@ class TrackerInitTestCase(unittest.TestCase):
             backend.repo.push_annex('origin')
             backend.repo.drop('store.h5')
         if backend_type == 'files':
-            backend = nts.FilesBackend()
+            backend = dtm.FilesBackend()
         elif backend_type == 'json':
-            backend = nts.JsonBackend()
+            backend = dtm.JsonBackend()
         else:
-            backend = nts.AnnexJsonBackend()
-        self.store2 = nts.HDFStore('store.h5', backend=backend, mode='r')
+            backend = dtm.AnnexJsonBackend()
+        self.store2 = dtm.HDFStore('store.h5', backend=backend, mode='r')
         arr2 = self.store2['arr']
         np.testing.assert_array_almost_equal_nulp(arr, arr2)
 
 
 class GenericFileStoreTestCase(unittest.TestCase):
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences,PyShadowingNames
     def setUp(self):
         # noinspection PyGlobalUndefined
-        global nts
+        global dtm
         from unittest.mock import patch
         import inspect
         cur_file = inspect.stack(0)[0][1]
         test_args = [cur_file, 1]
         with patch('sys.argv', test_args):
-            import neuroseries as nts
+            import dataman as dtm
 
         self.start_dir = os.getcwd()
         prepare_sandbox()
@@ -215,8 +214,8 @@ class GenericFileStoreTestCase(unittest.TestCase):
 
     def tearDown(self):
         import sys
-        del sys.modules[nts.__name__]
-        del sys.modules[nts.data_manager.__name__]
+        del sys.modules[dtm.__name__]
+        del sys.modules[dtm.data_manager.__name__]
 
         import shutil
         print(self.start_dir)
@@ -233,21 +232,21 @@ class GenericFileStoreTestCase(unittest.TestCase):
         os.mkdir('repo1')
         os.chdir('repo1')
         if backend_type == 'json':
-            backend = nts.JsonBackend()
+            backend = dtm.JsonBackend()
         else:
             os.chdir('..')
             create_remote_repo('repo2')
             os.chdir('../repo1')
             pex.run('git init')
             pex.run('git annex init')
-            backend = nts.AnnexJsonBackend()
+            backend = dtm.AnnexJsonBackend()
             backend.repo.add_remote('origin', '../repo2')
 
         with open('file2.txt', 'w') as f:
             content = make_random_text(1000)
             f.write(content)
 
-        self.store = nts.store_file('file2.txt',  backend=backend, comment='file 2 for figure')
+        self.store = dtm.store_file('file2.txt',  backend=backend, comment='file 2 for figure')
 
         self.assertTrue(os.path.exists('file2.json'))
         with open('file2.json', 'r') as f:
@@ -262,7 +261,7 @@ class GenericFileStoreTestCase(unittest.TestCase):
             backend.repo.push_annex('origin')
             backend.repo.drop('file2.txt')
 
-        nts.register_input('file2.txt', backend=backend)
+        dtm.register_input('file2.txt', backend=backend)
         self.assertTrue(os.path.exists('file2.txt'))
 
         with open('file2.txt', 'r') as f:
@@ -270,7 +269,7 @@ class GenericFileStoreTestCase(unittest.TestCase):
 
         self.assertEqual(read_content, content)
 
-        files_dependencies = [t['file'] for t in nts.dependencies]
+        files_dependencies = [t['file'] for t in dtm.dependencies]
         self.assertIn('file2.txt', files_dependencies)
 
     @parameterized.expand([('json',), ('annex',)])
@@ -278,14 +277,14 @@ class GenericFileStoreTestCase(unittest.TestCase):
         os.mkdir('repo1')
         os.chdir('repo1')
         if backend_type == 'json':
-            backend = nts.JsonBackend()
+            backend = dtm.JsonBackend()
         else:
             os.chdir('..')
             create_remote_repo('repo2')
             os.chdir('../repo1')
             pex.run('git init')
             pex.run('git annex init')
-            backend = nts.AnnexJsonBackend()
+            backend = dtm.AnnexJsonBackend()
             backend.repo.add_remote('origin', '../repo2')
 
         os.mkdir('child_dir')
@@ -294,8 +293,7 @@ class GenericFileStoreTestCase(unittest.TestCase):
             content = make_random_text(1000)
             f.write(content)
 
-
-        self.store = nts.store_file('file2.txt',  backend=backend, comment='file 2 for figure')
+        self.store = dtm.store_file('file2.txt',  backend=backend, comment='file 2 for figure')
 
         self.assertTrue(os.path.exists('file2.json'))
         with open('file2.json', 'r') as f:
@@ -314,7 +312,7 @@ class GenericFileStoreTestCase(unittest.TestCase):
             backend.repo.drop('child_dir/file2.txt')
             os.chdir('child_dir')
 
-        nts.register_input('file2.txt', backend=backend)
+        dtm.register_input('file2.txt', backend=backend)
         self.assertTrue(os.path.exists('file2.txt'))
 
         with open('file2.txt', 'r') as f:
@@ -322,5 +320,5 @@ class GenericFileStoreTestCase(unittest.TestCase):
 
         self.assertEqual(read_content, content)
 
-        files_dependencies = [t['file'] for t in nts.dependencies]
+        files_dependencies = [t['file'] for t in dtm.dependencies]
         self.assertIn('file2.txt', files_dependencies)
