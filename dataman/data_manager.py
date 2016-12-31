@@ -2,12 +2,50 @@ import json
 
 import numpy as np
 import pandas as pd
+import os
 
 from dataman.tracker_utils import get_repo_info, in_ipynb, get_environment_yml
 from .git_annex import AnnexRepo
 
-_dont_check_git = True
-_no_git_repo = True
+_dont_check_git = False
+_no_git_repo = False
+
+
+def check_git_repos(when_dirty='warn'):
+    import warnings
+    _, is_dirty, script_repo = get_repo_info(os.path.dirname(track_info['entry_point']))
+
+    if not _dont_check_git and is_dirty and not in_ipynb():
+        if when_dirty == 'warn':
+            warnings.warn("""Running from a dirty git repository (and not from a notebook).\n
+         Please commit your changes before running. You will not be able to save data
+                                 from this run""")
+        else:
+            raise RuntimeError("""Running from a dirty git repository (and not from a notebook).\n
+                                  Please commit your changes before running""")
+
+    if not _dont_check_git and is_dirty:
+        d = script_repo.index.diff(None)
+        if len(d) > 1:
+            if when_dirty == 'warn':
+                warnings.warn("""Running from a dirty git repo (besides the current notebook).
+                                 Please commit your changes before running. \nYou will not be able to save data
+                                 from this run""")
+            else:
+                raise RuntimeError("""Running from a dirty git repo (besides the current notebook).\n
+                                      Please commit your changes before running""")
+
+    print("len repos:")
+    print(len(track_info['repos']))
+    for repo in track_info['repos']:
+        print(repo)
+        _, is_dirty, _ = get_repo_info(repo['working_tree_dir'])
+        if is_dirty:
+            if when_dirty == 'warn':
+                warnings.warn("Dependency repository " + repo['working_tree_dir'] + " is dirty, please commit!\n" +
+                              "You will not  be able to save data from this run ")
+            else:
+                raise RuntimeError("Dependency repository " + repo['working_tree_dir'] + " is dirty, please commit!")
 
 
 # noinspection PyProtectedMember
@@ -49,16 +87,6 @@ def _get_init_info():
     else:
         script_repo_info, is_dirty, script_repo = get_repo_info(os.path.dirname(info['entry_point']))
 
-        if not _dont_check_git and is_dirty and not in_ipynb():
-            raise RuntimeError("""Running from a dirty git repository (and not from a notebook).
-            Please commit your changes before running""")
-
-        if not _dont_check_git and is_dirty:
-            d = script_repo.index.diff(None)
-            if len(d) > 1:
-                raise RuntimeError("""Running from a dirty git repo (besides the current notebook).
-                Please commit your changes before running""")
-
     repos.append(script_repo_info)
 
     # open config file, get git repos to be tracked, eventual files that need to be included in the dependencies
@@ -97,8 +125,6 @@ def _get_init_info():
 
     for r in extra_repos:
         script_repo_info, is_dirty, script_repo = get_repo_info(r)
-        if is_dirty:
-            raise RuntimeError("Dependency repository " + r + "is dirty, please commit!")
         repos.append(script_repo_info)
 
     info['repos'] = repos
@@ -122,6 +148,8 @@ def _get_init_info():
     return info
 
 track_info = _get_init_info()
+check_git_repos('warn')
+
 dependencies = []
 
 
@@ -512,6 +540,7 @@ class TrackingStore(object):
             store_type: the class to be used for material store
             **kwargs: optional arguments, will be passed to the material store
         """
+        check_git_repos(when_dirty='error')
         global dependencies
         if mode not in ['r', 'w']:
             raise ValueError('mode must be "w" or "r"')

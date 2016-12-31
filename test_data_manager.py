@@ -142,3 +142,33 @@ class UtilsTestCase(unittest.TestCase):
             self.assertEqual(s1, s2)
             d2 = json.loads(s2)
             self.assertEqual(d, d2)
+
+
+class GitWarningTestCase(unittest.TestCase):
+    def setUp(self):
+        from test_annex import make_random_text
+        import sys
+        del sys.modules['dataman']
+        del sys.modules['dataman.data_manager']
+
+        t = make_random_text(100)
+        with open('junk.txt', 'w') as f:
+            f.write(t)
+
+    def tearDown(self):
+        import os
+        os.unlink('junk.txt')
+
+    def test_warning_beginning(self):
+        import warnings
+        from unittest.mock import patch
+        import inspect
+        cur_file = inspect.stack(0)[0][1]
+        test_args = [cur_file, 1]
+        with patch('sys.argv', test_args):
+            with self.assertWarns(UserWarning):
+                # noinspection PyUnresolvedReferences
+                import dataman as dtm
+
+
+
