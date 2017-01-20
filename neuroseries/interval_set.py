@@ -33,9 +33,9 @@ class IntervalSet(pd.DataFrame):
             self.nts_class = self.__class__.__name__
             return
 
-        start = TimeUnits.format_timestamps(np.array(start, dtype=np.int64).ravel(), time_units,
+        start = TimeUnits.format_timestamps(start.ravel(), time_units,
                                             give_warning=not expect_fix)
-        end = TimeUnits.format_timestamps(np.array(end, dtype=np.int64).ravel(), time_units,
+        end = TimeUnits.format_timestamps(end.ravel(), time_units,
                                           give_warning=not expect_fix)
 
         to_fix = False

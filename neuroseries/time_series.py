@@ -175,6 +175,7 @@ class TimeUnits:
         else:
             raise ValueError('unrecognized time units type')
 
+        t = t.astype(np.int64)
         if isinstance(t, BlockManager):
             t = pd.DataFrame(t, copy=True)
 
