@@ -91,7 +91,7 @@ class IntervalSet(pd.DataFrame):
         e = self['end'].iloc[-1]
         return IntervalSet(s, e)
 
-    def tot_length(self, time_units='us'):
+    def tot_length(self, time_units=None):
         """
         Total elapsed time in the set.
 

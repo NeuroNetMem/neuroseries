@@ -205,8 +205,7 @@ class TimeUnits:
         Returns:
             ts: times in the desired format
         """
-
-        if not units:
+        if units is None:
             units = TimeUnits.default_time_units
         if units == 'us':
             return t
