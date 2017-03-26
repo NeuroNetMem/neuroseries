@@ -406,6 +406,25 @@ class TsdFrame(pd.DataFrame):
         df.index.name = "Time (" + units_str + ")"
         return df
 
+    def plot(self, units=None):
+        """
+        makes a plot with the units of choices
+        Args:
+            units: us (s), ms, or s
+
+        Returns:
+            None
+        """
+
+        dz = pd.DataFrame(index=self.times(units=units), data=self.values, columns=self.columns, copy=False)
+        units_str = units
+        if not units_str:
+            units_str = 'us'
+        dz.index.name = "Time (" + units_str + ")"
+        dz.plot()
+
+
+
     def data(self):
         if len(self.columns) == 1:
             return self.values.ravel()
