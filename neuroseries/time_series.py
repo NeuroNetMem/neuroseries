@@ -384,26 +384,26 @@ class TsdFrame(pd.DataFrame):
     def times(self, units=None):
         return TimeUnits.return_timestamps(self.index.values.astype(np.float64), units)
 
-    def as_dataframe(self):
+    def as_dataframe(self, copy=True):
         """
         :return: copy of the data in a DataFrame (strip Tsd class label)
         """
-        return pd.DataFrame(self, copy=True)
+        return pd.DataFrame(self, copy=copy)
 
-    def as_units(self, units=None):
+    def as_units(self, units=None, copy=False):
         """
         returns a DataFrame with time expressed in the desired unit
         :param units: us (s), ms, or s
         :return: DataFrame with adjusted times
         """
-        df = self.as_dataframe()
-        t = self.index.values
+        t = self.index.values.copy()
         t = TimeUnits.return_timestamps(t, units)
-        df.set_index(t, inplace=True)
+        df = pd.DataFrame(index=t, data=self.values)
         units_str = units
         if not units_str:
             units_str = 'us'
         df.index.name = "Time (" + units_str + ")"
+        df.colunms = self.columns.copy()
         return df
 
     def plot(self, units=None):
