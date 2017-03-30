@@ -165,6 +165,20 @@ class TimeUnits:
         if not units:
             units = TimeUnits.default_time_units
 
+        # get the times (or the index if pandas object, in int64 vector format
+
+        if isinstance(t, BlockManager):
+            t = pd.DataFrame(t, copy=True)
+
+        if isinstance(t, (pd.Series, pd.DataFrame)):
+            t = t.index.values.astype(np.int64)
+
+        if isinstance(t, np.floating):
+            t = t.round()
+
+        if isinstance(t, (pd.Series, pd.DataFrame)):
+            t = t.index
+
         t = t.astype(np.float64)
         if units == 'us':
             pass
@@ -175,18 +189,7 @@ class TimeUnits:
         else:
             raise ValueError('unrecognized time units type')
 
-        t = t.astype(np.int64)
-        if isinstance(t, BlockManager):
-            t = pd.DataFrame(t, copy=True)
-
-        if isinstance(t, (pd.Series, pd.DataFrame)):
-            ts = t.index.values.astype(np.int64)
-            ts = ts.round()
-        else:
-            t = t.round()
-            ts = t.astype(np.int64)
-
-        ts = ts.reshape((len(ts),))
+        ts = t.astype(np.int64).reshape((len(t),))
 
         if not (np.diff(ts) >= 0).all():
             if give_warning:
@@ -390,7 +393,7 @@ class TsdFrame(pd.DataFrame):
         """
         return pd.DataFrame(self, copy=copy)
 
-    def as_units(self, units=None, copy=False):
+    def as_units(self, units=None):
         """
         returns a DataFrame with time expressed in the desired unit
         :param units: us (s), ms, or s
@@ -403,7 +406,7 @@ class TsdFrame(pd.DataFrame):
         if not units_str:
             units_str = 'us'
         df.index.name = "Time (" + units_str + ")"
-        df.colunms = self.columns.copy()
+        df.columns = self.columns.copy()
         return df
 
     def plot(self, units=None):
@@ -422,8 +425,6 @@ class TsdFrame(pd.DataFrame):
             units_str = 'us'
         dz.index.name = "Time (" + units_str + ")"
         dz.plot()
-
-
 
     def data(self):
         if len(self.columns) == 1:
@@ -508,6 +509,15 @@ Tsd.gaps = as_method(gaps)
 # noinspection PyTypeChecker
 TsdFrame.gaps = as_method(gaps)
 
+
+def start_time(data):
+    return data.times[0]
+
+Tsd.start_time = as_method(start_time)
+TsdFrame.start_time = as_method(start_time)
+
+def end_time(data):
+    return data.times[-1]
 
 def support(data, min_gap, method='absolute'):
     """

@@ -33,6 +33,8 @@ class IntervalSet(pd.DataFrame):
             self.nts_class = self.__class__.__name__
             return
 
+        start = np.array(start)
+        end = np.array(end)
         start = TimeUnits.format_timestamps(start.ravel(), time_units,
                                             give_warning=not expect_fix)
         end = TimeUnits.format_timestamps(end.ravel(), time_units,
@@ -117,8 +119,8 @@ class IntervalSet(pd.DataFrame):
         time1.extend(time2)
         time = np.hstack(time1)
 
-        start_end = np.hstack((np.ones(len(time)/2, dtype=np.int32),
-                              -1 * np.ones(len(time)/2, dtype=np.int32)))
+        start_end = np.hstack((np.ones(len(time)//2, dtype=np.int32),
+                              -1 * np.ones(len(time)//2, dtype=np.int32)))
 
         df = pd.DataFrame({'time': time, 'start_end': start_end})
         df.sort_values(by='time', inplace=True)
@@ -144,8 +146,8 @@ class IntervalSet(pd.DataFrame):
         time = np.hstack([i_set['start'] for i_set in i_sets] +
                          [i_set['end'] for i_set in i_sets])
 
-        start_end = np.hstack((np.ones(len(time)/2, dtype=np.int32),
-                              -1 * np.ones(len(time)/2, dtype=np.int32)))
+        start_end = np.hstack((np.ones(len(time)//2, dtype=np.int32),
+                              -1 * np.ones(len(time)//2, dtype=np.int32)))
 
         df = pd.DataFrame({'time': time, 'start_end': start_end})
         df.sort_values(by='time', inplace=True)
