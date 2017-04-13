@@ -162,6 +162,9 @@ class TimeUnits:
         Returns:
             ts: times in standard neuroseries format
         """
+
+        import numbers
+
         if not units:
             units = TimeUnits.default_time_units
 
@@ -179,6 +182,9 @@ class TimeUnits:
         if isinstance(t, (pd.Series, pd.DataFrame)):
             t = t.index
 
+        if isinstance(t, numbers.Number):
+            t = np.array((t,))
+
         t = t.astype(np.float64)
         if units == 'us':
             pass
@@ -189,6 +195,7 @@ class TimeUnits:
         else:
             raise ValueError('unrecognized time units type')
 
+        # noinspection PyUnresolvedReferences,PyTypeChecker
         ts = t.astype(np.int64).reshape((len(t),))
 
         if not (np.diff(ts) >= 0).all():
@@ -351,7 +358,7 @@ class Tsd(pd.Series):
         if not keep_labels:
             s = tsd_r.iloc[:, col]
             return Tsd(s)
-        return TsdFrame(tsd_r, copy=True)
+        return Tsd(tsd_r, copy=True)
 
     @property
     def r(self):
@@ -510,14 +517,24 @@ Tsd.gaps = as_method(gaps)
 TsdFrame.gaps = as_method(gaps)
 
 
-def start_time(data):
-    return data.times[0]
+def start_time(data, units='us'):
+    return data.times(units=units)[0]
 
+
+# noinspection PyTypeChecker
 Tsd.start_time = as_method(start_time)
+# noinspection PyTypeChecker
 TsdFrame.start_time = as_method(start_time)
 
-def end_time(data):
-    return data.times[-1]
+
+def end_time(data, units='us'):
+    return data.times(units=units)[-1]
+
+# noinspection PyTypeChecker
+Tsd.end_time = as_method(end_time)
+# noinspection PyTypeChecker
+TsdFrame.end_time = as_method(end_time)
+
 
 def support(data, min_gap, method='absolute'):
     """

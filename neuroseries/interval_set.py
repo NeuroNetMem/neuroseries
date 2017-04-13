@@ -78,7 +78,8 @@ class IntervalSet(pd.DataFrame):
 
         # super().__init__({'start': start, 'end': end}, **kwargs)
         # self = self[['start', 'end']]
-        super().__init__(data=np.vstack((start, end)).T, columns=('start', 'end'), **kwargs)
+        data = np.vstack((start, end)).T
+        super().__init__(data=data, columns=('start', 'end'), **kwargs)
         self.r_cache = None
         self._metadata = ['nts_class']
         self.nts_class = self.__class__.__name__
@@ -218,6 +219,19 @@ class IntervalSet(pd.DataFrame):
         threshold = TimeUnits.format_timestamps(np.array((threshold,), dtype=np.int64).ravel(), time_units)[0]
         return self.ix[(self['end']-self['start']) > threshold]
 
+    def as_units(self, units=None):
+        """
+        returns a DataFrame with time expressed in the desired unit
+        :param units: us (s), ms, or s
+        :return: DataFrame with adjusted times
+        """
+
+        data = self.values.copy()
+        data = TimeUnits.return_timestamps(data, units)
+        df = pd.DataFrame(data=data, columns=self.columns)
+
+        return df
+
     def merge_close_intervals(self, threshold, time_units=None):
         """
         Merges intervals that are very close.
@@ -226,6 +240,8 @@ class IntervalSet(pd.DataFrame):
         :param time_units: time units for the threshold
         :return: a copied IntervalSet with merged intervals
         """
+        if len(self) == 0:
+            return IntervalSet(start=[], end=[])
         tsp = self.time_span()
         i1 = tsp.set_diff(self)
         i1 = i1.drop_short_intervals(threshold, time_units=time_units)
@@ -256,13 +272,13 @@ class IntervalSet(pd.DataFrame):
     def invalidate_restrict_cache(self):
         self.r_cache = None
 
-    def __iter__(self):
-        self.iter_r = self.iterrows()
-        return self
-
-    def __next__(self):
-        n = next(self.iter_r)[1]
-        return IntervalSet(n['start'], n['end'])
+    # def __iter__(self):
+    #     self.iter_r = self.iterrows()
+    #     return self
+    #
+    # def __next__(self):
+    #     n = next(self.iter_r)[1]
+    #     return IntervalSet(n['start'], n['end'])
 
 
 IntervalSet.store = as_method(store)

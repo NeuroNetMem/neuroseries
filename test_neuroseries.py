@@ -38,8 +38,7 @@ class TsTestCase(unittest.TestCase):
         self.assertIs(ts.index.dtype, np.dtype(np.int64), msg='index type is not int64')
         np.testing.assert_array_almost_equal_nulp(a, ts.index.values)
 
-    @staticmethod
-    def test_create_ts_time_units():
+    def test_create_ts_time_units(self):
         """
         internally data are stored as us
         """
@@ -48,8 +47,9 @@ class TsTestCase(unittest.TestCase):
         ts = nts.Ts(a/1000, time_units='ms')
         np.testing.assert_array_almost_equal_nulp(ts.index.values, a)
         ts = nts.Ts(a/1000000, time_units='s')
-        np.testing.assert_array_almost_equal_nulp(ts.index.values, a.astype(np.int64))
-
+        # np.testing.assert_array_almost_equal_nulp(ts.index.values, a.astype(np.int64), nulp=100)
+        self.assertTrue(np.all(ts.index.values >= a.astype(np.int64)-1))
+        self.assertTrue(np.all(ts.index.values <= a.astype(np.int64)+1))
     @staticmethod
     def test_create_ts_time_units_double():
         """
@@ -224,9 +224,9 @@ class IntervalSetOpsTestCase(unittest.TestCase):
     def test_iterator(self):
         a_i1 = self.mat_data1['a_i1'].ravel().astype(np.int64)
         b_i1 = self.mat_data1['b_i1'].ravel().astype(np.int64)
-        for i, int_i in enumerate(self.int1):
-            self.assertEqual(a_i1[i], int_i['start'].values)
-            self.assertEqual(b_i1[i], int_i['end'].values)
+        for i, int_i in self.int1.iterrows():
+            self.assertEqual(a_i1[i], int_i['start'])
+            self.assertEqual(b_i1[i], int_i['end'])
 
     def test_timespan_tot_length(self):
         """
