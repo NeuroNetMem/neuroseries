@@ -11,3 +11,4 @@ store.h5
 /.ipynb_checkpoints/
 /.neuroseries
 /neuroseries.yml
+build
