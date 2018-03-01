@@ -15,7 +15,7 @@ config = {
 current_path = os.getcwd()
 try:
     os.chdir(os.path.dirname(__file__))
-    GIT_VERSION = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+    GIT_VERSION = subprocess.check_output(["git", "describe", "--tags"]).strip().decode('utf-8')
     GIT_VERSION = GIT_VERSION.split('-')[0]
 except subprocess.CalledProcessError as e:
     GIT_VERSION = "0.1"
