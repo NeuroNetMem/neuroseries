@@ -12,3 +12,4 @@ store.h5
 /.neuroseries
 /neuroseries.yml
 build
+dist

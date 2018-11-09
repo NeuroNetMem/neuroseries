@@ -20,6 +20,7 @@ except subprocess.CalledProcessError as e:
     GIT_VERSION = "0.1"
 os.chdir(current_path)
 
+print(GIT_VERSION)
 
 here = path.abspath(path.dirname(__file__))
 
@@ -32,9 +33,9 @@ setup(description='neuro time series handling utilities',
       url='https://github.com/MemDynLab/neuroseries',
       author='Francesco P. Battaglia',
       author_email='fpbattaglia@gmail.com',
-      version='0.1',
+      version=GIT_VERSION,
       license='GPLv3',
-      install_requires=['numpy', 'pandas', 'scipy', 'IPython', 'psutil', 'git'],
+      install_requires=['numpy', 'pandas', 'scipy', 'IPython', 'psutil', 'gitpython', 'parameterized'],
       packages=['neuroseries', 'dataman'],
       package_data={'resources': ['resources/*.*']},
       include_package_data=True,

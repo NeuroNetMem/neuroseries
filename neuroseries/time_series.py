@@ -2,82 +2,8 @@ import pandas as pd
 import numpy as np
 from warnings import warn
 from pandas.core.internals import SingleBlockManager, BlockManager
-from pandas.core.base import AccessorProperty, PandasObject
 
 use_pandas_metadata = True
-
-
-class BaseMethod(PandasObject):
-    """
-    Abstract class for converting functions into methods.
-
-    .. This is based on the :func:`~pandas.core.base.AccessorProperty` class.
-
-    It is mostly used here so that the same function may be applied to Tsd, TsdFrame and other classes
-    """
-
-    def __init__(self, data):
-        """
-        Creates an Accessor Property.
-
-        Args:
-            data: the object to be wrapped
-        """
-        self._data = data
-
-    @staticmethod
-    def func(*args, **kwargs):
-        """
-        dummy implementation for the function that will be wrapped
-
-        Args:
-            *args: Whatever the function requires
-            **kwargs: Whatever the function requires
-
-        Returns:
-            None
-
-        Raises:
-            NotImplementedError: Always
-
-        """
-        raise NotImplementedError('should have a function defined here.')
-
-    # noinspection PyNoneFunctionAssignment
-    def __call__(self, *args, **kwargs):
-        """
-        This is the caller method for the wrapper
-        Args:
-            *args: Whatever the function requires
-            **kwargs: Whatever the function requires
-
-        Returns:
-            Whatever the function returns
-
-        """
-        if len(args) == 0:
-            fc = self.func(self._data, **kwargs)
-        else:
-            fc = self.func(self._data, *args, **kwargs)
-        return fc
-
-    __doc__ = func.__doc__
-    __call__.__doc__ = func.__doc__
-
-
-def as_method(func):
-    """
-    Converts a function into a method
-
-    Using the AccessorProperty mechanism, see :func:`~neuroseries.BaseMethod`
-    :param func: a function
-    :return: a method
-    """
-    name = func.__name__.capitalize() + 'Method'
-    cls = type(name, (BaseMethod,), {'func': staticmethod(func),
-                                     '__doc__': func.__doc__})
-    ap = AccessorProperty(cls, cls)
-    return ap
 
 
 class Range:
@@ -360,6 +286,40 @@ class Tsd(pd.Series):
             return Tsd(s)
         return Tsd(tsd_r, copy=True)
 
+    def gaps(self, min_gap, method='absolute'):
+        """
+        finds gaps in a tsd
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet containing the gaps in the TSd
+        """
+        return gaps_func(self, min_gap, method)
+
+    def support(self, min_gap, method='absolute'):
+        """
+        find the smallest (to a min_gap resolution) IntervalSet containing all the times in the Tsd
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet
+        """
+        return support_func(self, min_gap, method)
+
+    def start_time(self, units='us'):
+        return self.times(units=units)[0]
+
+    def end_time(self, units='us'):
+        return self.times(units=units)[-1]
+
+    def store(self, the_store, key, **kwargs):
+        data_to_store = self.as_series()
+
+        the_store[key] = data_to_store
+        # noinspection PyProtectedMember
+        metadata = {k: getattr(self, k) for k in self._metadata}
+        the_store.put(key, data_to_store, metadata, **kwargs)
+
     @property
     def r(self):
         if Range.interval is None:
@@ -455,6 +415,40 @@ class TsdFrame(pd.DataFrame):
             del tsd_r['interval']
         return TsdFrame(tsd_r, copy=True)
 
+    def gaps(self, min_gap, method='absolute'):
+        """
+        finds gaps in a tsd
+        :param self: a Tsd/TsdFrame
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet containing the gaps in the TSd
+        """
+        return gaps_func(self, min_gap, method)
+
+    def support(self, min_gap, method='absolute'):
+        """
+        find the smallest (to a min_gap resolution) IntervalSet containing all the times in the Tsd
+        :param min_gap: the minimum gap that will be considered
+        :param method: 'absolute': min gap is expressed in time (us), 'median',
+        min_gap expressed in units of the median inter-sample event
+        :return: an IntervalSet
+        """
+        return support_func(self, min_gap, method)
+
+    def store(self, the_store, key, **kwargs):
+        data_to_store = pd.DataFrame(self)
+        the_store[key] = data_to_store
+        # noinspection PyProtectedMember
+        metadata = {k: getattr(self, k) for k in self._metadata}
+        the_store.put(key, data_to_store, metadata, **kwargs)
+
+    def start_time(self, units='us'):
+        return self.times(units=units)[0]
+
+    def end_time(self, units='us'):
+        return self.times(units=units)[-1]
+
     @property
     def _constructor(self):
         return TsdFrame
@@ -484,7 +478,7 @@ class Ts(Tsd):
         self.nts_class = self.__class__.__name__
 
 
-def gaps(data, min_gap, method='absolute'):
+def gaps_func(data, min_gap, method='absolute'):
     """
     finds gaps in a tsd
     :param data: a Tsd/TsdFrame
@@ -511,32 +505,7 @@ def gaps(data, min_gap, method='absolute'):
     return IntervalSet(st, en)
 
 
-# noinspection PyTypeChecker
-Tsd.gaps = as_method(gaps)
-# noinspection PyTypeChecker
-TsdFrame.gaps = as_method(gaps)
-
-
-def start_time(data, units='us'):
-    return data.times(units=units)[0]
-
-
-# noinspection PyTypeChecker
-Tsd.start_time = as_method(start_time)
-# noinspection PyTypeChecker
-TsdFrame.start_time = as_method(start_time)
-
-
-def end_time(data, units='us'):
-    return data.times(units=units)[-1]
-
-# noinspection PyTypeChecker
-Tsd.end_time = as_method(end_time)
-# noinspection PyTypeChecker
-TsdFrame.end_time = as_method(end_time)
-
-
-def support(data, min_gap, method='absolute'):
+def support_func(data, min_gap, method='absolute'):
     """
     find the smallest (to a min_gap resolution) IntervalSet containing all the times in the Tsd
     :param data: a Tsd/TsdFrame
@@ -546,18 +515,12 @@ def support(data, min_gap, method='absolute'):
     :return: an IntervalSet
     """
 
-    here_gaps = gaps(data, min_gap, method=method)
+    here_gaps = data.gaps(min_gap, method=method)
     t = data.times('us')
     from neuroseries.interval_set import IntervalSet
     span = IntervalSet(t[0] - 1, t[-1] + 1)
     support_here = span.set_diff(here_gaps)
     return support_here
-
-
-# noinspection PyTypeChecker
-Tsd.support = as_method(support)
-# noinspection PyTypeChecker
-TsdFrame.support = as_method(support)
 
 
 # noinspection PyUnusedLocal
@@ -575,12 +538,6 @@ def store(data, the_store, key, **kwargs):
     # noinspection PyProtectedMember
     metadata = {k: getattr(data, k) for k in data._metadata}
     the_store.put(key, data_to_store, metadata, **kwargs)
-
-
-# noinspection PyTypeChecker
-Tsd.store = as_method(store)
-# noinspection PyTypeChecker
-TsdFrame.store = as_method(store)
 
 
 def extract_from(storer):
