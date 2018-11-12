@@ -20,7 +20,7 @@ class HDFStoreTestCase(unittest.TestCase):
         self.mat_data1 = loadmat(
             '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
 
-        import os.path
+        import os
         try:
             os.remove('store.h5')
         except:
@@ -107,3 +107,7 @@ class HDFStoreTestCase(unittest.TestCase):
             all_vars = nts.extract_from(store)
         self.assertEqual(all_vars['int1'].nts_class, 'IntervalSet')
         self.assertIsInstance(all_vars['int1'], nts.IntervalSet)
+
+
+if __name__ == '__main__':
+    unittest.main()

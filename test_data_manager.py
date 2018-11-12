@@ -171,4 +171,5 @@ class GitWarningTestCase(unittest.TestCase):
                 import dataman as dtm
 
 
-
+if __name__ == '__main__':
+    unittest.main()

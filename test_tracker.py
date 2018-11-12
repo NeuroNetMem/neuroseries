@@ -322,3 +322,6 @@ class GenericFileStoreTestCase(unittest.TestCase):
 
         files_dependencies = [t['file'] for t in dtm.dependencies]
         self.assertIn('file2.txt', files_dependencies)
+
+if __name__ == '__main__':
+    unittest.main()

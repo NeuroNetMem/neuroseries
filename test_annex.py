@@ -459,3 +459,7 @@ class SpecialRemoteTestCase(unittest.TestCase):
         with open('file2.txt', 'r') as f:
             retrieved_file2_content = f.read()
         self.assertEqual(retrieved_file2_content, self.file2_content)
+
+
+if __name__ == '__main__':
+    unittest.main()
