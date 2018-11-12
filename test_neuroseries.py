@@ -510,3 +510,6 @@ class TsdIntervalSetRestrictTestCase(unittest.TestCase):
 
         with nts.Range(9.e8, 3.e9):
             np.testing.assert_array_almost_equal_nulp(self.tsd.r.times(), tsd_r.times())
+
+if __name__ == '__main__':
+    unittest.main()
