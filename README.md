@@ -9,5 +9,6 @@ It also includes an experimental data manager attempting at keeping track
 of all code used to generate each intermediate result, making use of 
 git and git-annex.
 
-This package requires Python 3 and has been tested with Python 3.5.3.
+This package requires Python 3. The current version, 0.3.0 is compatible with pandas 0.23 and
+has been tested with Python 3.7.
 Look at the test suite for use examples.
