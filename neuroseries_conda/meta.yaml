@@ -1,0 +1,26 @@
+package:
+  name: neuroseries
+  version: 0.3.1
+
+source:
+  git_rev: 0.3.1
+  git_url: https://github.com/MemDynLab/neuroseries
+
+requirements:
+  host:
+    - python=3.7
+    - setuptools
+
+  run:
+    - python=3.7
+    - numpy
+    - pandas>=0.23
+    - git
+    - ipython
+    - psutil
+    - parameterized
+
+about:
+  home: https://github.com/MemDynLab/neuroseries
+  license: GPLv3
+  license_file: LICENSE.txt
