@@ -5,5 +5,5 @@ from . import tests
 
 def get_test_data_dir():
     import os
-    path = os.path.join(os.path.dirname(__file__), os.pardir)
+    path = os.path.dirname(__file__)
     return os.path.join(path, 'test_data')
