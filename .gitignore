@@ -13,3 +13,4 @@ store.h5
 /neuroseries.yml
 build
 dist
+.eggs
