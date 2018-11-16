@@ -1,11 +1,9 @@
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 from codecs import open
 from os import path
 import os
+import glob
 import subprocess
 
 config = {
@@ -24,6 +22,9 @@ print(GIT_VERSION)
 
 here = path.abspath(path.dirname(__file__))
 
+# find test_data
+test_data = glob.glob('test_data/*.mat')
+
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -37,8 +38,8 @@ setup(description='neuro time series handling utilities',
       license='GPL3',
       install_requires=['numpy', 'pandas', 'scipy', 'parameterized'],
       packages=find_packages(),
-      package_data={'resources': ['resources/*.*']},
       include_package_data=True,
+      data_files=[('test_data', test_data)],
       test_suite='nose.collector',
       tests_require=['nose'],
       name='neuroseries',

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 import neuroseries as nts
-
+import os
 
 class TsTestCase(unittest.TestCase):
     def setUp(self):
@@ -105,11 +105,11 @@ class TsRestrictTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
         self.mat_data1 = \
-            loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/restrict_ts_data_1.mat')
+            loadmat(os.path.join(nts.get_test_data_dir(), 'restrict_ts_data_1.mat'))
         self.mat_data_left = \
-            loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/restrict_ts_data_2.mat')
+            loadmat(os.path.join(nts.get_test_data_dir(), 'restrict_ts_data_2.mat'))
         self.mat_data_right = \
-            loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/restrict_ts_data_3.mat')
+            loadmat(os.path.join(nts.get_test_data_dir(), 'restrict_ts_data_3.mat'))
 
     def tearDown(self):
         pass
@@ -187,7 +187,7 @@ class TsRestrictTestCase(unittest.TestCase):
 class IntervalSetOpsTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
-        self.mat_data1 = loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+        self.mat_data1 = loadmat(os.path.join(nts.get_test_data_dir(), 'interval_set_data_1.mat'))
 
         # note that data are n x 1 here, need to be converted to 1-D in constructor
         self.a1 = self.mat_data1['a1']
@@ -299,8 +299,8 @@ class IntervalSetOpsTestCase(unittest.TestCase):
 class IntervalSetDropMergeTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
-        self.mat_data1 = loadmat(
-            '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_dropmerge1.mat')
+        self.mat_data1 = loadmat(os.path.join(nts.get_test_data_dir(),
+            'interval_set_data_dropmerge1.mat'))
 
         # note that data are n x 1 here, need to be converted to 1-D in constructor
         self.a1 = self.mat_data1['a1'].ravel()
@@ -334,7 +334,7 @@ class IntervalSetDropMergeTestCase(unittest.TestCase):
 class TsdUnitsTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
-        self.mat_data1 = loadmat('/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+        self.mat_data1 = loadmat(os.path.join(nts.get_test_data_dir(), 'interval_set_data_1.mat'))
         self.tsd_t = self.mat_data1['t'].ravel()
         self.tsd_d = self.mat_data1['d'].ravel()
 
@@ -435,8 +435,8 @@ class TsdSupportTestCase(unittest.TestCase):
 class TsdIntervalSetRestrictTestCase(unittest.TestCase):
     def setUp(self):
         from scipy.io import loadmat
-        self.mat_data1 = loadmat(
-            '/Users/fpbatta/src/batlab/neuroseries/resources/test_data/interval_set_data_1.mat')
+        self.mat_data1 = loadmat(os.path.join(nts.get_test_data_dir(),
+            'interval_set_data_1.mat'))
 
         self.a1 = self.mat_data1['a1'].ravel()
         self.b1 = self.mat_data1['b1'].ravel()

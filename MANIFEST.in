@@ -6,3 +6,4 @@ include README.md
 
 # Include the data files
 recursive-include resources *
+recursive-include test_data *
