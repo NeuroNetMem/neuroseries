@@ -1,9 +1,9 @@
 package:
   name: neuroseries
-  version: 0.3.1
+  version: 0.3.2
 
 source:
-  git_rev: 0.3.1
+  git_rev: 0.3.2
   git_url: https://github.com/MemDynLab/neuroseries.git
 
 requirements:
@@ -19,6 +19,13 @@ requirements:
     - ipython
     - psutil
     - parameterized
+
+test:
+  imports:
+    - neuroseries
+  source_files:
+    - neuroseries/tests/test_neuroseries.py
+
 
 about:
   home: https://github.com/MemDynLab/neuroseries
