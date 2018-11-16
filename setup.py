@@ -1,5 +1,5 @@
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup
 
@@ -36,7 +36,7 @@ setup(description='neuro time series handling utilities',
       version=GIT_VERSION,
       license='GPL3',
       install_requires=['numpy', 'pandas', 'scipy', 'parameterized'],
-      packages=['neuroseries'],
+      packages=find_packages(),
       package_data={'resources': ['resources/*.*']},
       include_package_data=True,
       test_suite='nose.collector',
