@@ -3,7 +3,7 @@ package:
   version: 0.3.2
 
 source:
-  git_rev: 0.3.2
+  git_rev: master
   git_url: https://github.com/MemDynLab/neuroseries.git
 
 requirements:
@@ -15,9 +15,7 @@ requirements:
     - python=3.7
     - numpy
     - pandas>=0.23
-    - git
-    - ipython
-    - psutil
+    - scipy
     - parameterized
 
 test:
