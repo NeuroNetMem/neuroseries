@@ -493,7 +493,7 @@ class TsdIntervalSetRestrictTestCase(unittest.TestCase):
             np.testing.assert_array_almost_equal_nulp(self.int1.r['start'], int1_r['start'])
             np.testing.assert_array_almost_equal_nulp(self.int1.r['end'], int1_r['end'])
 
-            np.testing.assert_array_almost_equal_nulp(self.tsd.r.restrict(self.int1.r).times(),
+            np.testing .assert_array_almost_equal_nulp(self.tsd.r.restrict(self.int1.r).times(),
                                                       tsd_r_r1.times())
 
             # testing caching

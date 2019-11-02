@@ -270,21 +270,25 @@ class Tsd(pd.Series):
 
         Args:
             iset: the restricting interval set
-            keep_labels:
+            keep_labels: if True, a column is added with the index of the interval in the interval_set in which
+            each point falls.
 
         Returns:
-
+            the restricted Tsd. If keep_labels is True, it will be a TsdFrame
         """
         ix = iset.in_interval(self)
         tsd_r = pd.DataFrame(self, copy=True)
         col = tsd_r.columns[0]
-        tsd_r['interval'] = ix
+        tsd_r['interval'] = ix.astype(np.int64)
+        # noinspection PyUnresolvedReferences
         ix = ~np.isnan(ix)
         tsd_r = tsd_r[ix]
+
         if not keep_labels:
             s = tsd_r.iloc[:, col]
             return Tsd(s)
-        return Tsd(tsd_r, copy=True)
+        del tsd_r[0]
+        return TsdFrame(tsd_r, copy=True)
 
     def gaps(self, min_gap, method='absolute'):
         """
@@ -307,12 +311,38 @@ class Tsd(pd.Series):
         return support_func(self, min_gap, method)
 
     def start_time(self, units='us'):
+        """
+        The time of the first data point
+        Args:
+            units: the units in which to return the time
+
+        Returns:
+            A time
+        """
         return self.times(units=units)[0]
 
     def end_time(self, units='us'):
+        """
+        The time of the last data point in the Tsd
+        Args:
+            units: the units in which to return the time
+
+        Returns:
+            A time
+        """
         return self.times(units=units)[-1]
 
     def store(self, the_store, key, **kwargs):
+        """
+        Saves the data in the HDF5 file keeping
+        Args:
+            the_store:
+            key:
+            **kwargs:
+
+        Returns:
+
+        """
         data_to_store = self.as_series()
 
         the_store[key] = data_to_store
@@ -322,6 +352,11 @@ class Tsd(pd.Series):
 
     @property
     def r(self):
+        """
+        if in a Range context, returns the Tsd restricted to that Range
+        Returns:
+            the restricted Tsd
+        """
         if Range.interval is None:
             raise ValueError('no range interval set')
         if self.r_cache is None:
@@ -344,7 +379,7 @@ class TsdFrame(pd.DataFrame):
         if isinstance(t, (pd.DataFrame, SingleBlockManager, BlockManager)):
             super().__init__(t, **kwargs)
         else:
-            t = TimeUnits.format_timestamps(t, time_units)
+            t = TimeUnits.format_timestamps(t, time_units)  # TODO add arbitrary sampling rate
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
         self._metadata.append("nts_class")
@@ -352,6 +387,16 @@ class TsdFrame(pd.DataFrame):
         self.r_cache = None
 
     def times(self, units=None):
+        """
+        The times of the Tsd, returned as np.double in the desired time units
+
+        Args:
+            units: the desired time units
+
+        Returns:
+            ts: the times vector
+
+        """
         return TimeUnits.return_timestamps(self.index.values.astype(np.float64), units)
 
     def as_dataframe(self, copy=True):
@@ -394,11 +439,31 @@ class TsdFrame(pd.DataFrame):
         dz.plot()
 
     def data(self):
+        """
+        The values of the Frame
+        Returns:
+            the data as numpy array
+        """
         if len(self.columns) == 1:
+            # noinspection PyUnresolvedReferences
             return self.values.ravel()
         return self.values
 
     def realign(self, t, align='closest'):
+        """
+        Provides a new Series only including the data points that are close to one time point in the t argument.
+
+        Args:
+            t: the aligning series, in numpy or pandas format
+            align: the values accepted by :func:`pandas.Series.reindex` plus
+            - next (similar to bfill)
+            - prev (similar to ffill)
+            - closest (similar to nearest)
+
+        Returns:
+            The realigned TsdFrame
+
+        """
         method = _get_restrict_method(align)
         ix = TimeUnits.format_timestamps(t)
 
@@ -406,9 +471,21 @@ class TsdFrame(pd.DataFrame):
         return rest_t
 
     def restrict(self, iset, keep_labels=False):
+        """
+        Restricts the Tsd to a set of times delimited by a :func:`~neuroseries.interval_set.IntervalSet`
+
+        Args:
+            iset: the restricting interval set
+            keep_labels: if True, a column is added with the index of the interval in the interval_set in which
+            each point falls.
+
+        Returns:
+            the restricted Tsd. If keep_labels is True, it will be a TsdFrame
+        """
         ix = iset.in_interval(self)
         tsd_r = pd.DataFrame(self, copy=True)
-        tsd_r['interval'] = ix
+        tsd_r['interval'] = ix.astype(np.int64)
+        # noinspection PyUnresolvedReferences
         ix = ~np.isnan(ix)
         tsd_r = tsd_r[ix]
         if not keep_labels:
@@ -444,9 +521,25 @@ class TsdFrame(pd.DataFrame):
         the_store.put(key, data_to_store, metadata, **kwargs)
 
     def start_time(self, units='us'):
+        """
+        The time of the first data point
+        Args:
+            units: the units in which to return the time
+
+        Returns:
+            A time
+        """
         return self.times(units=units)[0]
 
     def end_time(self, units='us'):
+        """
+        The time of the last data point in the Tsd
+        Args:
+            units: the units in which to return the time
+
+        Returns:
+            A time
+        """
         return self.times(units=units)[-1]
 
     @property
@@ -459,6 +552,11 @@ class TsdFrame(pd.DataFrame):
 
     @property
     def r(self):
+        """
+        if in a Range context, returns the Tsd restricted to that Range
+        Returns:
+            the restricted TsdFrame
+        """
         if Range.interval is None:
             raise ValueError('no range interval set')
         if self.r_cache is None:
@@ -529,6 +627,17 @@ def filter_time_series(data, columns=None):
 
 
 def store(data, the_store, key, **kwargs):
+    """
+    Stores data in a pandas store
+    Args:
+        data: the nts object to story
+        the_store: the store
+        key: the HDF5 key
+        **kwargs:
+
+    Returns:
+        None
+    """
     if isinstance(data, Tsd):
         data_to_store = data.as_series()
     else:
@@ -541,6 +650,14 @@ def store(data, the_store, key, **kwargs):
 
 
 def extract_from(storer):
+    """
+    Extracts data from a stor
+    Args:
+        storer: the storage
+
+    Returns:
+        the data as appropriate type
+    """
     from neuroseries.interval_set import IntervalSet
     ks = storer.keys()
     extractable_classes = [Ts, Tsd, TsdFrame, IntervalSet]
