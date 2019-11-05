@@ -200,7 +200,7 @@ class IntervalSet(pd.DataFrame):
         IntervalSet.
         """
         bins = self.values.ravel()
-        ix = np.array(pd.cut(tsd.index, bins, labels=np.arange(len(bins) - 1, dtype=np.int64)))
+        ix = np.array(pd.cut(tsd.index, bins, labels=np.arange(len(bins) - 1, dtype=np.float64)))
         ix[np.floor(ix / 2) * 2 != ix] = np.NaN
         ix = np.floor(ix/2)
         return ix

@@ -1,5 +1,6 @@
 from .interval_set import *
 from .time_series import *
+from .basic_computations import *
 from . import tests
 
 
