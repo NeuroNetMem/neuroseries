@@ -8,7 +8,7 @@ use_pandas_metadata = True
 
 class Range:
     """
-    A class defining a range to restrict analyses.
+    A class defining a window to restrict analyses.
 
     This is used as a context manager, taking a :func:`~neuroseries.interval_set.IntervalSet` as an input.
     After that, all neuroseries objects will have a property r set, that will be restricted, for example:
@@ -25,8 +25,8 @@ class Range:
         """
         Creates a Range object
         Args:
-            a: an :ref:`IntervalSet` defining the range, or the lower bound of the range
-            b : if defined (defaults to :ref:`None`), contains the upper bound of the range, as a number of a Series
+            a: an :ref:`IntervalSet` defining the window, or the lower bound of the window
+            b : if defined (defaults to :ref:`None`), contains the upper bound of the window, as a number of a Series
             (or other object with an Index)
             time_units (str): a string defining the :ref:`TimeUnits` used to define the bounds.
         """
@@ -358,7 +358,7 @@ class Tsd(pd.Series):
             the restricted Tsd
         """
         if Range.interval is None:
-            raise ValueError('no range interval set')
+            raise ValueError('no window interval set')
         if self.r_cache is None:
             self.r_cache = self.restrict(Range.interval)
             Range.cached_objects.append(self)
@@ -558,7 +558,7 @@ class TsdFrame(pd.DataFrame):
             the restricted TsdFrame
         """
         if Range.interval is None:
-            raise ValueError('no range interval set')
+            raise ValueError('no window interval set')
         if self.r_cache is None:
             self.r_cache = self.restrict(Range.interval)
             Range.cached_objects.append(self)

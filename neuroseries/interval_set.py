@@ -269,7 +269,7 @@ class IntervalSet(pd.DataFrame):
 
         """
         if Range.interval is None:
-            raise ValueError('no range interval set')
+            raise ValueError('no window interval set')
         if self.r_cache is None:
             self.r_cache = self.intersect(Range.interval)
             Range.cached_objects.append(self)
