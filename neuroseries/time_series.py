@@ -1,9 +1,137 @@
+from __future__ import annotations
+
 import pandas as pd
 import numpy as np
 from warnings import warn
+from typing import Union, Optional
 from pandas.core.internals import SingleBlockManager, BlockManager
-
 use_pandas_metadata = True
+
+
+def _get_times(t):
+
+    # get the times (or the index if pandas object, in int64 vector format
+    t_out = None
+    import numbers
+    # noinspection DuplicatedCode
+    if isinstance(t, BlockManager):
+        t_out = pd.DataFrame(t, copy=True)
+
+    if isinstance(t, (pd.Series, pd.DataFrame, pd.Index)):
+        t_out = t.index.values.astype(np.int64)
+
+    if isinstance(t, np.floating):
+        t_out = t.round()
+
+    if isinstance(t, (pd.Series, pd.DataFrame)):
+        t_out = t.index.values
+
+    if isinstance(t, numbers.Number):
+        t_out = np.array((t,))
+
+    if isinstance(t, np.ndarray):
+        t_out = t
+
+    if t_out is None:
+        raise ValueError("Cannot convert to a vector of timestamps")
+
+    return t_out
+
+
+class TimeUnits:
+    """
+    This class deals with conversion between different time units for all neuroseries objects.
+    It also provides a context manager that tweaks the default time units to the supported units:
+    - 'us': microseconds (overall default)
+    - 'ms': milliseconds
+    - 's': seconds
+
+    The context manager is called as follows
+
+    .. code:: python
+
+        with nts.TimeUnits('ms'):
+            t = self.tsd.times()
+
+    """
+    default_time_units = None
+
+    def __init__(self, units: Union[str, float] = 'us'):
+
+        self.string = ""
+        standard_fps = {'us': 1, 'ms': 1e3, 's': 1e6}
+        if isinstance(units, str):
+            try:
+                self.conversion_factor = standard_fps[units]
+            except KeyError:
+                raise ValueError('Unit non recognized ', units)
+            self.string = units
+        else:
+            # we then consider units to be a sampling rate expressed in fps
+            self.conversion_factor = 1e6 / units
+            self.string = str(units) + " fps"
+
+    def __str__(self):
+        return self.string
+
+    def __enter__(self):
+        TimeUnits.default_time_units = self
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        TimeUnits.default_time_units = TimeUnits('us')
+
+    @staticmethod
+    def format_timestamps(t, units: Optional['TimeUnits'] = None, give_warning=True):
+        """
+        Converts numerical types to the type :func:`numpy.int64` that is used for the time index in neuroseries.
+
+        Args:
+            t: a vector (or scalar) of times
+            units: the units in which times are given
+            give_warning: if True, it will warn when the timestamps are not sored
+
+        Returns:
+            ts: times in standard neuroseries format
+        """
+
+        if not units:
+            units = TimeUnits.default_time_units
+
+        t = _get_times(t)
+
+        t = t.astype(np.float64) * units.conversion_factor
+
+        # noinspection PyUnresolvedReferences,PyTypeChecker
+        ts = t.astype(np.int64).reshape((len(t),))
+
+        if not (np.diff(ts) >= 0).all():
+            if give_warning:
+                warn('timestamps are not sorted', UserWarning)
+            ts.sort()
+        return ts
+
+    @staticmethod
+    def return_timestamps(t, units=Optional['TimeUnits']):
+        """
+        package the times in the desired units
+        Args:
+            t: standard neuroseries times
+            units: the desired units for the output
+
+        Returns:
+            ts: times in the desired format
+        """
+        if units is None:
+            units = TimeUnits.default_time_units
+        return t / units.conversion_factor
+
+
+TimeUnits.default_time_units = TimeUnits('us')
+
+seconds = TimeUnits('s')
+milliseconds = TimeUnits('ms')
+microseconds = TimeUnits('us')
 
 
 class Range:
@@ -21,7 +149,7 @@ class Range:
     interval = None
     cached_objects = []
 
-    def __init__(self, a, b=None, time_units=None):
+    def __init__(self, a, b=None, time_units: Optional[str] = None):
         """
         Creates a Range object
         Args:
@@ -46,111 +174,6 @@ class Range:
         for i in Range.cached_objects:
             i.invalidate_restrict_cache()
         self.cached_objects = []
-
-
-class TimeUnits:
-    """
-    This class deals with conversion between different time units for all neuroseries objects.
-    It also provides a context manager that tweaks the default time units to the supported units:
-    - 'us': microseconds (overall default)
-    - 'ms': milliseconds
-    - 's': seconds
-
-    The context manager is called as follows
-
-    .. code:: python
-
-        with nts.TimeUnits('ms'):
-            t = self.tsd.times()
-
-    """
-    default_time_units = 'us'
-
-    def __init__(self, units):
-        TimeUnits.default_time_units = units
-
-    def __enter__(self):
-        return self.default_time_units
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        TimeUnits.default_time_units = 'us'
-
-    @staticmethod
-    def format_timestamps(t, units=None, give_warning=True):
-        """
-        Converts numerical types to the type :func:`numpy.int64` that is used for the time index in neuroseries.
-
-        Args:
-            t: a vector (or scalar) of times
-            units: the units in which times are given
-            give_warning: if True, it will warn when the timestamps are not sored
-
-        Returns:
-            ts: times in standard neuroseries format
-        """
-
-        import numbers
-
-        if not units:
-            units = TimeUnits.default_time_units
-
-        # get the times (or the index if pandas object, in int64 vector format
-
-        if isinstance(t, BlockManager):
-            t = pd.DataFrame(t, copy=True)
-
-        if isinstance(t, (pd.Series, pd.DataFrame)):
-            t = t.index.values.astype(np.int64)
-
-        if isinstance(t, np.floating):
-            t = t.round()
-
-        if isinstance(t, (pd.Series, pd.DataFrame)):
-            t = t.index
-
-        if isinstance(t, numbers.Number):
-            t = np.array((t,))
-
-        t = t.astype(np.float64)
-        if units == 'us':
-            pass
-        elif units == 'ms':
-            t *= 1000
-        elif units == 's':
-            t *= 1000000
-        else:
-            raise ValueError('unrecognized time units type')
-
-        # noinspection PyUnresolvedReferences,PyTypeChecker
-        ts = t.astype(np.int64).reshape((len(t),))
-
-        if not (np.diff(ts) >= 0).all():
-            if give_warning:
-                warn('timestamps are not sorted', UserWarning)
-            ts.sort()
-        return ts
-
-    @staticmethod
-    def return_timestamps(t, units=None):
-        """
-        package the times in the desired units
-        Args:
-            t: standard neuroseries times
-            units: the desired units for the output
-
-        Returns:
-            ts: times in the desired format
-        """
-        if units is None:
-            units = TimeUnits.default_time_units
-        if units == 'us':
-            return t
-        elif units == 'ms':
-            return t / 1000.
-        elif units == 's':
-            return t / 1.0e6
-        else:
-            raise ValueError('Unrecognized units')
 
 
 def _get_restrict_method(align):
@@ -218,19 +241,19 @@ class Tsd(pd.Series):
         return pd.Series(self, copy=True)
 
     def as_units(self, units=None):
+        # noinspection DuplicatedCode
         """
-        Returns a Series with time expressed in the desired unit.
+                Returns a Series with time expressed in the desired unit.
 
-        :param units: us, ms, or s
-        :return: Series with adjusted times
-        """
+                :param units: us, ms, or s
+                :return: Series with adjusted times
+                """
         ss = self.as_series()
         t = self.index.values
         t = TimeUnits.return_timestamps(t, units)
         ss.index = t
-        units_str = units
-        if not units_str:
-            units_str = 'us'
+        units_str = str(units)
+
         ss.index.name = "Time (" + units_str + ")"
         return ss
 
@@ -310,7 +333,7 @@ class Tsd(pd.Series):
         """
         return support_func(self, min_gap, method)
 
-    def start_time(self, units='us'):
+    def start_time(self, units=microseconds):
         """
         The time of the first data point
         Args:
@@ -321,7 +344,7 @@ class Tsd(pd.Series):
         """
         return self.times(units=units)[0]
 
-    def end_time(self, units='us'):
+    def end_time(self, units=microseconds):
         """
         The time of the last data point in the Tsd
         Args:
@@ -379,7 +402,7 @@ class TsdFrame(pd.DataFrame):
         if isinstance(t, (pd.DataFrame, SingleBlockManager, BlockManager)):
             super().__init__(t, **kwargs)
         else:
-            t = TimeUnits.format_timestamps(t, time_units)  # TODO add arbitrary sampling rate
+            t = TimeUnits.format_timestamps(t, time_units)
             super().__init__(index=t, data=d, **kwargs)
         self.index.name = "Time (us)"
         self._metadata.append("nts_class")
@@ -406,15 +429,16 @@ class TsdFrame(pd.DataFrame):
         return pd.DataFrame(self, copy=copy)
 
     def as_units(self, units=None):
+        # noinspection DuplicatedCode
         """
-        returns a DataFrame with time expressed in the desired unit
-        :param units: us (s), ms, or s
-        :return: DataFrame with adjusted times
-        """
+                returns a DataFrame with time expressed in the desired unit
+                :param units: us (s), ms, or s
+                :return: DataFrame with adjusted times
+                """
         t = self.index.values.copy()
         t = TimeUnits.return_timestamps(t, units)
         df = pd.DataFrame(index=t, data=self.values)
-        units_str = units
+        units_str = str(units)
         if not units_str:
             units_str = 'us'
         df.index.name = "Time (" + units_str + ")"
@@ -585,7 +609,7 @@ def gaps_func(data, min_gap, method='absolute'):
     min_gap expressed in units of the median inter-sample event
     :return: an IntervalSet containing the gaps in the TSd
     """
-    dt = np.diff(data.times(units='us'))
+    dt = np.diff(data.times(units=TimeUnits.default_time_units))
 
     if method == 'absolute':
         pass
@@ -614,7 +638,7 @@ def support_func(data, min_gap, method='absolute'):
     """
 
     here_gaps = data.gaps(min_gap, method=method)
-    t = data.times('us')
+    t = data.times(microseconds)
     from neuroseries.interval_set import IntervalSet
     span = IntervalSet(t[0] - 1, t[-1] + 1)
     support_here = span.set_diff(here_gaps)

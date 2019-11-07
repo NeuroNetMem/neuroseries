@@ -44,9 +44,9 @@ class TsTestCase(unittest.TestCase):
         """
         a = np.random.randint(0, 1000, 100)
         a.sort()
-        ts = nts.Ts(a/1000, time_units='ms')
+        ts = nts.Ts(a/1000, time_units=nts.milliseconds)
         np.testing.assert_array_almost_equal_nulp(ts.index.values, a)
-        ts = nts.Ts(a/1000000, time_units='s')
+        ts = nts.Ts(a/1000000, time_units=nts.seconds)
         # np.testing.assert_array_almost_equal_nulp(ts.index.values, a.astype(np.int64), nulp=100)
         self.assertTrue(np.all(ts.index.values >= a.astype(np.int64)-1))
         self.assertTrue(np.all(ts.index.values <= a.astype(np.int64)+1))
@@ -57,7 +57,7 @@ class TsTestCase(unittest.TestCase):
         """
         a = np.floor(np.random.rand(100) * 1000000)
         a.sort()
-        ts = nts.Ts(a.copy(), time_units='ms')
+        ts = nts.Ts(a.copy(), time_units=nts.milliseconds)
         # noinspection PyTypeChecker
         np.testing.assert_array_almost_equal_nulp(ts.index.values/1000, a)
 
@@ -82,7 +82,7 @@ class TsTestCase(unittest.TestCase):
         # noinspection PyUnusedLocal
         ts = 1
         with self.assertRaises(ValueError):
-            ts = nts.Ts(a, time_units='min')
+            ts = nts.Ts(a, time_units=nts.TimeUnits('min'))
         self.assertTrue(ts)
 
     def test_times_data(self):
@@ -95,10 +95,10 @@ class TsTestCase(unittest.TestCase):
         t = nts.Tsd(a, b)
         np.testing.assert_array_almost_equal_nulp(b, t.data())
         np.testing.assert_array_almost_equal_nulp(a, t.times())
-        np.testing.assert_array_almost_equal_nulp(a/1000., t.times(units='ms'))
-        np.testing.assert_array_almost_equal_nulp(a/1.0e6, t.times(units='s'))
+        np.testing.assert_array_almost_equal_nulp(a/1000., t.times(units=nts.milliseconds))
+        np.testing.assert_array_almost_equal_nulp(a/1.0e6, t.times(units=nts.seconds))
         with self.assertRaises(ValueError):
-            t.times(units='banana')
+            t.times(units=nts.TimeUnits('banana'))
 
 
 class TsRestrictTestCase(unittest.TestCase):
@@ -371,9 +371,9 @@ class TsdUnitsTestCase(unittest.TestCase):
         a.sort()
         ts = nts.Ts(a)
 
-        np.testing.assert_array_almost_equal_nulp(a, ts.times('us'))
-        np.testing.assert_array_almost_equal_nulp(a/1000., ts.times('ms'))
-        np.testing.assert_array_almost_equal_nulp(a/1.e6, ts.times('s'))
+        np.testing.assert_array_almost_equal_nulp(a, ts.times(nts.microseconds))
+        np.testing.assert_array_almost_equal_nulp(a/1000., ts.times(nts.milliseconds))
+        np.testing.assert_array_almost_equal_nulp(a/1.e6, ts.times(nts.seconds))
 
     @parameterized.expand([
         (nts.Tsd,),
@@ -385,7 +385,7 @@ class TsdUnitsTestCase(unittest.TestCase):
         :return:
         """
         self.tsd = data_class(self.tsd_t, self.tsd_d)
-        tsd_ms = self.tsd.as_units('ms')
+        tsd_ms = self.tsd.as_units(nts.milliseconds)
         if data_class == nts.Tsd:
             self.assertIsInstance(tsd_ms, pd.Series)
         else:
@@ -393,7 +393,7 @@ class TsdUnitsTestCase(unittest.TestCase):
         # noinspection PyTypeChecker
         np.testing.assert_array_almost_equal_nulp(self.tsd_t/1000., tsd_ms.index.values)
 
-        tsd_s = self.tsd.as_units('s')
+        tsd_s = self.tsd.as_units(nts.seconds)
         # noinspection PyTypeChecker
         np.testing.assert_array_almost_equal_nulp(self.tsd_t/1.e6, tsd_s.index.values)
 
